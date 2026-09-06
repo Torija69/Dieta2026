@@ -254,6 +254,56 @@ a {
   flex-wrap: wrap;
 }
 
+/* Botón de cuenta y sincronización de la cabecera. */
+.btn--cuenta {
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.btn--cuenta-activa {
+  border-color: color-mix(in oklch, var(--accent) 45%, var(--border));
+  color: var(--accent-strong);
+}
+
+/* En pantallas estrechas el botón queda como icono, con el nombre solo para
+   lectores de pantalla, y la cabecera se mantiene en una sola fila. */
+@media (max-width: 620px) {
+  .btn--cuenta #cuenta-texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .btn--cuenta {
+    min-width: 2.5rem;
+    padding-inline: var(--space-2);
+    justify-content: center;
+  }
+
+  .header-meta {
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+  }
+
+  .header-status {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .btn--cuenta,
+  .theme-toggle {
+    flex: none;
+  }
+}
+
 .header-status {
   text-align: right;
   font-size: var(--text-xs);

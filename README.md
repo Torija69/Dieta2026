@@ -173,6 +173,105 @@ donde puedes revisar y modificar las fechas antes de guardar.
 
 ---
 
+## Cuenta y sincronización con la nube (Supabase)
+
+La aplicación funciona **sin cuenta**: todo se guarda en el propio navegador. Además, de forma
+**opcional**, puedes crear una cuenta para que los datos viajen entre el móvil y el ordenador.
+
+### Cómo se controla el acceso desde la web
+
+- El acceso se gestiona con **Supabase Auth** (correo electrónico y contraseña). El botón
+  **Cuenta** de la cabecera abre el formulario de acceso, registro y recuperación de contraseña.
+- Cada fila de la base de datos pertenece a un usuario. La tabla `public.dietas` tiene la
+  **seguridad a nivel de fila (RLS) activada** y cuatro políticas que solo permiten leer,
+  insertar, modificar y borrar la fila cuyo `usuario_id` coincide con `auth.uid()`. Es decir:
+  aunque alguien conozca la dirección del proyecto, **no puede ver los datos de otra cuenta**.
+- Las fotografías se guardan en un **bucket privado** llamado `fotos-dieta`, con la ruta
+  `<id-de-usuario>/<clave-de-la-foto>.jpg`. Las políticas de `storage.objects` comprueban que la
+  primera carpeta de la ruta sea el identificador del usuario, de modo que cada persona solo
+  accede a sus propias imágenes. El bucket no es público: las imágenes se descargan con la sesión
+  del usuario.
+- La página usa la **clave publicable** (`sb_publishable_…`), que está pensada para ir en el
+  navegador. No concede ningún permiso por sí misma: quien decide qué se puede leer o escribir es
+  RLS. **Nunca** debe usarse la clave `service_role` en el navegador.
+- Si prefieres restringir aún más quién puede registrarse, en el panel de Supabase puedes
+  desactivar los registros nuevos (*Authentication → Sign In / Providers → Allow new users to
+  sign up*) una vez creada tu cuenta. Así la aplicación queda de uso exclusivamente personal.
+
+### Configuración
+
+Los datos del proyecto están en las primeras líneas de `nube.js`:
+
+```js
+const NUBE_CONFIG = {
+  url: 'https://TU-PROYECTO.supabase.co',
+  clavePublicable: 'sb_publishable_...',
+};
+```
+
+El esquema de la base de datos y las políticas están en `supabase.sql`: se puede pegar tal cual
+en el editor SQL de Supabase para reproducir la instalación desde cero.
+
+Para que la aplicación pueda leer y escribir en la tabla, el proyecto necesita la **Data API
+activada** con el esquema `public` expuesto (*Project Settings → Data API*). Si está desactivada,
+el acceso funciona y las fotos también, pero la sincronización de los datos devuelve un error de
+tipo «Could not query the database for the schema cache».
+
+### Cómo se sincroniza
+
+El modelo es **local primero**: la aplicación siempre escribe en el navegador y después envía una
+copia a la nube.
+
+1. Al iniciar sesión se comparan las fechas de última modificación (`meta.actualizadoEn`).
+2. Si en la nube no hay nada, se sube lo que haya en el dispositivo.
+3. Si la copia de la nube es **más reciente**, se aplica en el dispositivo.
+4. Si la copia local es más reciente, se sube.
+5. Después, cada cambio se sube automáticamente unos segundos más tarde (envío agrupado). Si no
+   hay conexión, el envío queda pendiente y se reintenta al recuperar la red o al volver a la
+   pestaña.
+
+La regla es **la última escritura gana**, comparando la fecha de modificación. No hay fusión
+campo a campo: si editas el mismo día en dos dispositivos sin sincronizar, se conserva el cambio
+más reciente. Para casos dudosos, en Ajustes hay dos botones manuales:
+
+- **Subir este dispositivo a la nube**: fuerza que la copia local sustituya la de la nube.
+- **Traer los datos de la nube**: fuerza que la copia de la nube sustituya la local.
+
+Las fotografías se copian al bucket cuando se añaden y se borran del bucket al eliminarlas. Si al
+sincronizar falta una fotografía en el dispositivo, se descarga de la nube al abrir el día.
+
+### Sin conexión
+
+`localStorage` e `IndexedDB` siguen siendo la fuente principal, así que la aplicación funciona
+igual sin conexión y sin cuenta. Lo único que se pospone es el envío a la nube.
+
+### Dónde alojar la web
+
+Supabase **no aloja sitios estáticos**: ofrece base de datos, autenticación, almacenamiento y
+funciones, pero no una URL para publicar `index.html`. Opciones sencillas para tener la aplicación
+en una dirección web:
+
+- **GitHub Pages** desde este mismo repositorio (*Settings → Pages → Deploy from a branch →
+  main → / (root)*).
+- Cualquier alojamiento estático (Netlify, Vercel, Cloudflare Pages) subiendo los cuatro
+  archivos.
+- O simplemente abrir `index.html` en el dispositivo, como hasta ahora.
+
+Conviene añadir la dirección final en Supabase, en *Authentication → URL Configuration → Site
+URL* y *Redirect URLs*, para que los correos de confirmación y de recuperación de contraseña
+vuelvan a la aplicación.
+
+### Aviso sobre los correos de confirmación
+
+Por defecto Supabase pide **confirmar el correo** al registrarse y el servicio de correo incluido
+está muy limitado (unos pocos envíos por hora). Si el correo no llega, hay dos caminos:
+
+- Crear el usuario a mano en el panel: *Authentication → Users → Add user*, marcando
+  **Auto Confirm User**.
+- O desactivar la confirmación en *Authentication → Sign In / Providers → Email → Confirm email*.
+
+---
+
 ## Almacenamiento de los datos
 
 | Contenido                                                        | Dónde se guarda                                  |
@@ -243,6 +342,8 @@ mi-plan-dieta/
 ├── index.html    Estructura de la página y las siete secciones
 ├── styles.css    Sistema de diseño, temas claro y oscuro, responsive e impresión
 ├── app.js        Datos del menú, lógica del ciclo, vistas y persistencia
+├── nube.js       Cuenta, sesión y sincronización opcional con Supabase
+├── supabase.sql  Tablas, políticas RLS y bucket de fotografías
 └── README.md     Este documento
 ```
 
@@ -257,7 +358,8 @@ compra, componentes de interfaz, vistas, acciones y arranque.
 - Gráficas de evolución del cumplimiento a lo largo de los seis meses.
 - Cantidades sugeridas por producto y agrupación por establecimiento.
 - Recordatorios y notificaciones para registrar las comidas del día.
-- Sincronización opcional entre dispositivos mediante un archivo en la nube.
+- Fusión más fina de los cambios cuando se edita a la vez en dos dispositivos.
+- Acceso con enlace mágico o con proveedores externos, además de correo y contraseña.
 - Registro de peso, medidas o sensaciones asociadas a cada semana.
 - Instalación como aplicación (PWA) con icono propio y funcionamiento sin conexión
   garantizado.

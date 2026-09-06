@@ -284,6 +284,21 @@ const TIPOS_EXCEPCION = {
   cena: 'Solo cena',
 };
 
+/* Si nube.js no está disponible, la aplicación sigue funcionando en local. */
+if (!window.Nube) {
+  window.Nube = {
+    aplicandoRemoto: false,
+    estado: 'sin-biblioteca',
+    detalle: 'No se ha cargado el módulo de nube.',
+    disponible: () => false,
+    conectado: () => false,
+    correo: () => '',
+    init: () => Promise.resolve(false),
+    alCambiar: () => {},
+    textoEstado: () => ({ icono: '📴', texto: 'Solo en este dispositivo' }),
+  };
+}
+
 /* ---------------------------------------------------------
    3. Almacenamiento
    --------------------------------------------------------- */
@@ -469,6 +484,7 @@ function estadoInicial(fechaInicioISO) {
   const fin = D.addDays(D.addMonths(inicio, 6), -1);
   return {
     version: 1,
+    meta: { actualizadoEn: new Date().toISOString() },
     settings: {
       fechaInicioPrograma: D.iso(inicio),
       fechaFinPrograma: D.iso(fin),
@@ -522,6 +538,8 @@ const ui = {
 };
 
 function guardar(mensaje) {
+  if (!state.meta) state.meta = {};
+  if (!Nube.aplicandoRemoto) state.meta.actualizadoEn = new Date().toISOString();
   const datos = JSON.stringify(state);
   const ok = Store.set(CLAVE_DATOS, datos);
   if (!ok) {
@@ -529,6 +547,8 @@ function guardar(mensaje) {
     return false;
   }
   if (mensaje) toast(mensaje);
+  if (Nube.conectado() && !Nube.aplicandoRemoto) Nube.programarSubida(() => state);
+  pintarCuenta();
   return true;
 }
 
@@ -555,6 +575,10 @@ function normalizar(datos) {
   s.primerDiaSemana = 1;
   return {
     version: 1,
+    meta:
+      datos.meta && typeof datos.meta === 'object' && datos.meta.actualizadoEn
+        ? datos.meta
+        : { actualizadoEn: new Date().toISOString() },
     settings: s,
     mealLogs: datos.mealLogs && typeof datos.mealLogs === 'object' ? datos.mealLogs : {},
     shoppingLists: datos.shoppingLists && typeof datos.shoppingLists === 'object' ? datos.shoppingLists : {},
@@ -1225,6 +1249,7 @@ function pintarCabecera() {
         ? 'Antes de la semana 1'
         : `Fuera del calendario de ${p.totalSemanas} semanas`;
   $('#header-program').textContent = `${p.etiquetaEstado} · Menú Semana ${p.menuActual} · ${posicion}`;
+  pintarCuenta();
 }
 
 /* --- Vista: Hoy --- */
@@ -2200,6 +2225,8 @@ function renderConfig() {
         <span aria-hidden="true">♻️</span>Restaurar el menú original del plan</button>
     </section>
 
+    ${tarjetaNube()}
+
     <section class="card" aria-labelledby="cfg-datos">
       <h3 id="cfg-datos" class="card-title"><span aria-hidden="true">💾</span> Datos</h3>
       <p class="hint">Almacenamiento actual: ${
@@ -2354,6 +2381,9 @@ async function procesarFoto(file) {
     log.fotografia = clave;
     log.fechaDeActualizacion = new Date().toISOString();
     actualizar('Foto añadida');
+    if (Nube.conectado()) {
+      Nube.subirFoto(clave, dataUrl).catch(() => {});
+    }
   } catch (e) {
     console.warn(e);
     toast('No se pudo procesar la fotografía', 'error');
@@ -2826,7 +2856,11 @@ function manejarClick(ev) {
         textoConfirmar: 'Eliminar foto',
         onConfirmar: async () => {
           const l = asegurarRegistro(fecha, tipo);
-          if (l.fotografia) await Fotos.borrar(l.fotografia);
+          if (l.fotografia) {
+            const claveBorrada = l.fotografia;
+            await Fotos.borrar(claveBorrada);
+            if (Nube.conectado()) Nube.borrarFoto(claveBorrada).catch(() => {});
+          }
           l.fotografia = null;
           l.fechaDeActualizacion = new Date().toISOString();
           limpiarRegistro(claveComida(fecha, tipo));
@@ -3208,6 +3242,37 @@ function manejarClick(ev) {
         },
       });
       return;
+    /* Cuenta y nube */
+    case 'cuenta':
+      abrirCuenta();
+      return;
+    case 'nube-entrar':
+      formularioAcceso('entrar');
+      return;
+    case 'nube-registrar':
+      formularioAcceso('registrar');
+      return;
+    case 'nube-recuperar':
+      formularioAcceso('recuperar');
+      return;
+    case 'nube-salir':
+      cerrarSesionNube();
+      return;
+    case 'nube-sincronizar':
+      sincronizarAhora();
+      return;
+    case 'nube-subir':
+      forzarSubida();
+      return;
+    case 'nube-bajar':
+      forzarBajada();
+      return;
+    case 'nube-contrasena':
+      formularioNuevaContrasena();
+      return;
+    case 'nube-borrar-remoto':
+      borrarDatosNube();
+      return;
     case 'exportar-json':
       exportarJSON();
       return;
@@ -3309,6 +3374,469 @@ function manejarCambio(ev) {
 }
 
 /* ---------------------------------------------------------
+   13. Cuenta y sincronización con la nube (Supabase)
+   --------------------------------------------------------- */
+
+/** Refresca el botón de cuenta de la cabecera. */
+function pintarCuenta() {
+  const btn = $('#cuenta-btn');
+  if (!btn) return;
+  const info = Nube.textoEstado();
+  $('#cuenta-icono').textContent = info.icono;
+  $('#cuenta-texto').textContent = Nube.conectado() ? info.texto : Nube.disponible() ? 'Acceso' : 'Local';
+  const correo = Nube.correo();
+  btn.setAttribute(
+    'aria-label',
+    Nube.conectado()
+      ? `Cuenta de ${correo}. Estado: ${info.texto}. Abrir opciones de cuenta`
+      : 'Entrar o crear una cuenta para sincronizar los datos'
+  );
+  btn.title = correo || 'Acceso y sincronización';
+  btn.classList.toggle('btn--cuenta-activa', Nube.conectado());
+}
+
+/** Arranca la capa de nube y sincroniza si ya hay sesión abierta. */
+function iniciarNube() {
+  Nube.init()
+    .then((listo) => {
+      pintarCuenta();
+      if (!listo) return;
+      Nube.alCambiar((evento) => {
+        pintarCuenta();
+        if (evento === 'PASSWORD_RECOVERY') formularioNuevaContrasena();
+        if (evento === 'SIGNED_IN') sincronizacionInicial();
+        if (evento === 'SIGNED_OUT') render();
+      });
+      if (Nube.conectado()) sincronizacionInicial();
+    })
+    .catch((e) => console.warn('Nube no disponible', e));
+}
+
+/** ¿El dispositivo tiene datos propios que merezca la pena conservar? */
+function hayDatosLocales() {
+  if (!state) return false;
+  const registros = Object.keys(state.mealLogs || {}).length;
+  const listas = Object.keys(state.shoppingLists || {}).length;
+  const excepciones = (state.exceptions || []).filter((e) => !e.sugerida || e.activa).length;
+  return registros > 0 || listas > 0 || excepciones > 0;
+}
+
+/**
+ * Compara la copia local con la de la nube y deja la más reciente en los dos sitios.
+ * Criterio: gana la que se guardó más tarde (marca `meta.actualizadoEn`).
+ */
+async function sincronizacionInicial() {
+  if (!Nube.conectado()) return;
+  Nube.estado = 'sincronizando';
+  Nube.detalle = '';
+  pintarCuenta();
+  try {
+    const remoto = await Nube.descargar();
+    if (!remoto || !remoto.datos || !Object.keys(remoto.datos).length) {
+      await subirTodoALaNube();
+      toast('Datos subidos a la nube');
+      return;
+    }
+    const localISO = (state.meta && state.meta.actualizadoEn) || '';
+    const remotoISO = (remoto.datos.meta && remoto.datos.meta.actualizadoEn) || remoto.actualizadoEn || '';
+    if (!hayDatosLocales() || remotoISO > localISO) {
+      await aplicarRemoto(remoto.datos);
+      toast('Datos descargados de la nube');
+    } else if (localISO > remotoISO) {
+      await subirTodoALaNube();
+      toast('Datos subidos a la nube');
+    } else {
+      Nube.estado = 'sincronizado';
+      pintarCuenta();
+    }
+  } catch (e) {
+    Nube.estado = 'error';
+    Nube.detalle = e.message;
+    pintarCuenta();
+    toast(`No se pudo sincronizar: ${e.message}`, 'error');
+  }
+}
+
+/** Sustituye el estado local por el de la nube. */
+async function aplicarRemoto(datos) {
+  const normalizado = normalizar(datos);
+  if (!normalizado) throw new Error('Los datos de la nube no son válidos');
+  Nube.aplicandoRemoto = true;
+  state = normalizado;
+  aplicarTema();
+  guardar();
+  Nube.aplicandoRemoto = false;
+  Nube.estado = 'sincronizado';
+  ui.semanaVista = D.iso(D.lunes(D.hoy()));
+  ui.semanaControl = D.iso(D.lunes(D.hoy()));
+  ui.semanaCompra = lunesProximaSemana();
+  render();
+  pintarCuenta();
+  await recuperarFotosDeLaNube();
+}
+
+/** Descarga las fotografías que el estado menciona y no están en este dispositivo. */
+async function recuperarFotosDeLaNube() {
+  if (!Nube.conectado()) return;
+  const claves = Object.keys(state.mealLogs || {})
+    .map((k) => state.mealLogs[k].fotografia)
+    .filter((c) => c && !Fotos.obtener(c));
+  for (let i = 0; i < claves.length; i += 1) {
+    try {
+      const dataUrl = await Nube.descargarFoto(claves[i]);
+      if (dataUrl) await Fotos.guardar(claves[i], dataUrl);
+    } catch (e) {
+      /* si falla una foto, se continúa con el resto */
+    }
+  }
+  if (claves.length) render();
+}
+
+/** Sube el estado y las fotografías que falten en la nube. */
+async function subirTodoALaNube() {
+  if (!Nube.conectado()) return false;
+  await Nube.subir(state);
+  pintarCuenta();
+  try {
+    const enLaNube = await Nube.listarFotos();
+    const locales = Fotos.todas();
+    for (let i = 0; i < locales.length; i += 1) {
+      if (enLaNube.indexOf(locales[i].clave) === -1) {
+        await Nube.subirFoto(locales[i].clave, locales[i].dataUrl);
+      }
+    }
+  } catch (e) {
+    /* las fotografías se reintentarán en la siguiente sincronización */
+  }
+  return true;
+}
+
+/* --- Diálogos --- */
+
+/** Panel de cuenta: estado, acceso o cierre de sesión. */
+function abrirCuenta() {
+  if (!Nube.disponible()) {
+    abrirModal({
+      titulo: 'Solo en este dispositivo',
+      cuerpo: `<p>No se ha podido cargar la conexión con la nube, así que la aplicación está funcionando en modo
+        local: todo se guarda únicamente en este navegador.</p>
+        <p class="hint">${esc(Nube.detalle || 'Comprueba la conexión y vuelve a cargar la página.')}</p>`,
+      acciones: [{ texto: 'Entendido', clase: 'btn--primary', cerrar: true }],
+    });
+    return;
+  }
+  if (!Nube.conectado()) {
+    formularioAcceso('entrar');
+    return;
+  }
+  const info = Nube.textoEstado();
+  abrirModal({
+    titulo: 'Tu cuenta',
+    cuerpo: `<p>Sesión iniciada como <strong>${esc(Nube.correo())}</strong>.</p>
+      <p>Estado de la sincronización: <strong>${esc(info.icono)} ${esc(info.texto)}</strong></p>
+      <p class="hint">Los datos se guardan primero en este dispositivo y se copian a la nube en segundo plano, de
+      modo que puedes seguir registrando comidas sin conexión.</p>`,
+    acciones: [
+      {
+        texto: '🔄 Sincronizar ahora',
+        clase: 'btn--primary',
+        onClick: () => {
+          sincronizarAhora();
+          return true;
+        },
+      },
+      {
+        texto: '🔑 Cambiar contraseña',
+        onClick: () => {
+          formularioNuevaContrasena();
+          return false;
+        },
+      },
+      {
+        texto: '🚪 Cerrar sesión',
+        onClick: () => {
+          cerrarSesionNube();
+          return true;
+        },
+      },
+      { texto: 'Cerrar', clase: 'btn--ghost', cerrar: true },
+    ],
+  });
+}
+
+/**
+ * Formulario de acceso.
+ * @param {'entrar'|'registrar'|'recuperar'} modo
+ */
+function formularioAcceso(modo) {
+  const titulos = {
+    entrar: 'Entrar en tu cuenta',
+    registrar: 'Crear una cuenta',
+    recuperar: 'Recuperar la contraseña',
+  };
+  const campoContrasena =
+    modo === 'recuperar'
+      ? ''
+      : `<div class="field"><label for="ac-pass">Contraseña</label>
+          <input type="password" id="ac-pass" autocomplete="${
+            modo === 'registrar' ? 'new-password' : 'current-password'
+          }" minlength="6" required />
+          ${modo === 'registrar' ? '<p class="hint">Mínimo 6 caracteres.</p>' : ''}</div>`;
+  const explicacion = {
+    entrar: 'Entra para sincronizar tus registros entre el móvil y el ordenador.',
+    registrar:
+      'Crea una cuenta con tu correo. Recibirás un mensaje de confirmación; hasta que lo confirmes podrás seguir usando la aplicación en local.',
+    recuperar: 'Te enviaremos un enlace al correo para establecer una contraseña nueva.',
+  };
+  const enlaces = {
+    entrar: `<div class="row">
+        <button type="button" class="btn btn--ghost" data-accion="nube-registrar">Crear una cuenta</button>
+        <button type="button" class="btn btn--ghost" data-accion="nube-recuperar">He olvidado la contraseña</button>
+      </div>`,
+    registrar: `<div class="row">
+        <button type="button" class="btn btn--ghost" data-accion="nube-entrar">Ya tengo cuenta</button>
+      </div>`,
+    recuperar: `<div class="row">
+        <button type="button" class="btn btn--ghost" data-accion="nube-entrar">Volver al acceso</button>
+      </div>`,
+  };
+
+  abrirModal({
+    titulo: titulos[modo],
+    cuerpo: `<p>${esc(explicacion[modo])}</p>
+      <div class="field"><label for="ac-email">Correo electrónico</label>
+        <input type="email" id="ac-email" autocomplete="email" value="${esc(Nube.correo())}" required /></div>
+      ${campoContrasena}
+      <p class="hint" id="ac-aviso" role="status" aria-live="polite"></p>
+      ${enlaces[modo]}`,
+    alAbrir: () => {
+      const campo = $('#ac-email');
+      if (campo) campo.focus();
+    },
+    acciones: [
+      {
+        texto: modo === 'registrar' ? 'Crear cuenta' : modo === 'recuperar' ? 'Enviar enlace' : 'Entrar',
+        clase: 'btn--primary',
+        onClick: () => {
+          const email = ($('#ac-email').value || '').trim();
+          const pass = $('#ac-pass') ? $('#ac-pass').value : '';
+          const aviso = $('#ac-aviso');
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            aviso.textContent = 'Escribe una dirección de correo válida.';
+            return false;
+          }
+          if (modo !== 'recuperar' && pass.length < 6) {
+            aviso.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+            return false;
+          }
+          aviso.textContent = 'Conectando…';
+          const tarea =
+            modo === 'registrar'
+              ? Nube.registrar(email, pass)
+              : modo === 'recuperar'
+                ? Nube.recuperar(email)
+                : Nube.entrar(email, pass);
+          tarea
+            .then((res) => {
+              cerrarModal();
+              if (modo === 'recuperar') {
+                toast('Te hemos enviado un correo para restablecer la contraseña');
+              } else if (modo === 'registrar' && res && res.necesitaConfirmacion) {
+                abrirModal({
+                  titulo: 'Confirma tu correo',
+                  cuerpo: `<p>Hemos enviado un mensaje a <strong>${esc(email)}</strong>. Abre el enlace para
+                    activar la cuenta y vuelve a entrar.</p>
+                    <p class="hint">Mientras tanto puedes seguir usando la aplicación en este dispositivo: al entrar
+                    por primera vez, tus datos actuales se subirán a la nube.</p>`,
+                  acciones: [{ texto: 'Entendido', clase: 'btn--primary', cerrar: true }],
+                });
+              } else {
+                toast(`Sesión iniciada como ${email}`);
+              }
+              pintarCuenta();
+            })
+            .catch((e) => {
+              const a = $('#ac-aviso');
+              if (a) a.textContent = e.message;
+              else toast(e.message, 'error');
+            });
+          return false;
+        },
+      },
+      { texto: 'Cancelar', clase: 'btn--ghost', cerrar: true },
+    ],
+  });
+}
+
+function formularioNuevaContrasena() {
+  abrirModal({
+    titulo: 'Nueva contraseña',
+    cuerpo: `<div class="field"><label for="ac-pass1">Contraseña nueva</label>
+        <input type="password" id="ac-pass1" autocomplete="new-password" minlength="6" /></div>
+      <div class="field"><label for="ac-pass2">Repite la contraseña</label>
+        <input type="password" id="ac-pass2" autocomplete="new-password" minlength="6" /></div>
+      <p class="hint" id="ac-aviso2" role="status" aria-live="polite"></p>`,
+    alAbrir: () => $('#ac-pass1') && $('#ac-pass1').focus(),
+    acciones: [
+      {
+        texto: 'Guardar contraseña',
+        clase: 'btn--primary',
+        onClick: () => {
+          const p1 = $('#ac-pass1').value;
+          const p2 = $('#ac-pass2').value;
+          const aviso = $('#ac-aviso2');
+          if (p1.length < 6) {
+            aviso.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+            return false;
+          }
+          if (p1 !== p2) {
+            aviso.textContent = 'Las dos contraseñas no coinciden.';
+            return false;
+          }
+          Nube.cambiarContrasena(p1)
+            .then(() => {
+              cerrarModal();
+              toast('Cambios guardados: contraseña actualizada');
+            })
+            .catch((e) => {
+              aviso.textContent = e.message;
+            });
+          return false;
+        },
+      },
+      { texto: 'Cancelar', clase: 'btn--ghost', cerrar: true },
+    ],
+  });
+}
+
+function cerrarSesionNube() {
+  confirmar({
+    titulo: 'Cerrar sesión',
+    mensaje:
+      'Los datos seguirán guardados en este dispositivo y en la nube. Para volver a sincronizar tendrás que entrar de nuevo.',
+    textoConfirmar: 'Cerrar sesión',
+    peligro: false,
+    onConfirmar: () => {
+      Nube.salir()
+        .then(() => {
+          toast('Sesión cerrada');
+          pintarCuenta();
+          render();
+        })
+        .catch((e) => toast(e.message, 'error'));
+    },
+  });
+}
+
+async function sincronizarAhora() {
+  if (!Nube.conectado()) {
+    formularioAcceso('entrar');
+    return;
+  }
+  toast('Sincronizando…');
+  await sincronizacionInicial();
+  if (Nube.estado === 'sincronizado') toast('Sincronización completada');
+}
+
+function forzarSubida() {
+  confirmar({
+    titulo: 'Subir los datos de este dispositivo',
+    mensaje: 'Se sustituirá la copia de la nube por la de este dispositivo. Es útil si sospechas que la nube tiene datos antiguos.',
+    textoConfirmar: 'Subir y sustituir',
+    onConfirmar: () => {
+      subirTodoALaNube()
+        .then(() => toast('Datos subidos a la nube'))
+        .catch((e) => toast(`No se pudo subir: ${e.message}`, 'error'));
+    },
+  });
+}
+
+function forzarBajada() {
+  confirmar({
+    titulo: 'Descargar los datos de la nube',
+    mensaje: 'Se sustituirán los datos de este dispositivo por los de la nube. Los cambios locales sin sincronizar se perderán.',
+    textoConfirmar: 'Descargar y sustituir',
+    onConfirmar: () => {
+      Nube.descargar()
+        .then((remoto) => {
+          if (!remoto || !remoto.datos || !Object.keys(remoto.datos).length) {
+            toast('Todavía no hay datos guardados en la nube', 'error');
+            return null;
+          }
+          return aplicarRemoto(remoto.datos).then(() => toast('Datos descargados de la nube'));
+        })
+        .catch((e) => toast(`No se pudo descargar: ${e.message}`, 'error'));
+    },
+  });
+}
+
+function borrarDatosNube() {
+  confirmar({
+    titulo: 'Borrar la copia de la nube',
+    mensaje:
+      'Se eliminarán tus datos del servidor, incluidas las fotografías. La copia de este dispositivo no se toca. Esta acción no se puede deshacer.',
+    textoConfirmar: 'Borrar de la nube',
+    onConfirmar: () => {
+      Nube.borrarFila()
+        .then(async () => {
+          const claves = await Nube.listarFotos();
+          for (let i = 0; i < claves.length; i += 1) await Nube.borrarFoto(claves[i]);
+          Nube.estado = 'conectado';
+          pintarCuenta();
+          render();
+          toast('Datos borrados de la nube');
+        })
+        .catch((e) => toast(`No se pudo borrar: ${e.message}`, 'error'));
+    },
+  });
+}
+
+/** Tarjeta «Cuenta y sincronización» de la vista Configuración. */
+function tarjetaNube() {
+  const info = Nube.textoEstado();
+  if (!Nube.disponible()) {
+    return `<section class="card" aria-labelledby="cfg-nube">
+      <h3 id="cfg-nube" class="card-title"><span aria-hidden="true">📴</span> Cuenta y sincronización</h3>
+      <p>La aplicación está funcionando <strong>solo en este dispositivo</strong>: no se ha podido cargar la
+      conexión con la nube.</p>
+      <p class="hint">${esc(Nube.detalle || 'Comprueba la conexión a Internet y vuelve a cargar la página.')}</p>
+    </section>`;
+  }
+  if (!Nube.conectado()) {
+    return `<section class="card" aria-labelledby="cfg-nube">
+      <h3 id="cfg-nube" class="card-title"><span aria-hidden="true">🔒</span> Cuenta y sincronización</h3>
+      <p>Ahora mismo los datos se guardan solo en este navegador. Si creas una cuenta, tus registros, comentarios y
+      fotografías se copian a la nube y puedes consultarlos desde el móvil y desde el ordenador.</p>
+      <p class="hint">Cada cuenta solo puede leer y escribir sus propios datos: el acceso está restringido en el
+      servidor mediante seguridad a nivel de fila.</p>
+      <div class="row">
+        <button type="button" class="btn btn--primary" data-accion="nube-entrar"><span aria-hidden="true">🔑</span>Entrar</button>
+        <button type="button" class="btn" data-accion="nube-registrar"><span aria-hidden="true">🆕</span>Crear una cuenta</button>
+        <button type="button" class="btn btn--ghost" data-accion="nube-recuperar"><span aria-hidden="true">✉️</span>He olvidado la contraseña</button>
+      </div>
+    </section>`;
+  }
+  const marca = Nube.estado === 'sincronizado' && Nube.detalle ? new Date(Nube.detalle) : null;
+  const cuando = marca && !isNaN(marca) ? ` · Última copia: ${marca.toLocaleString('es-ES')}` : '';
+  return `<section class="card" aria-labelledby="cfg-nube">
+    <h3 id="cfg-nube" class="card-title"><span aria-hidden="true">☁️</span> Cuenta y sincronización</h3>
+    <p>Sesión iniciada como <strong>${esc(Nube.correo())}</strong>.</p>
+    <p>Estado: <strong>${esc(info.icono)} ${esc(info.texto)}</strong>${esc(cuando)}</p>
+    <p class="hint">Se guarda primero en el dispositivo y después en la nube, así que puedes seguir registrando
+    comidas sin conexión: los cambios se envían cuando vuelve la conexión. Si editas desde dos dispositivos, se
+    conserva la versión guardada más tarde.</p>
+    <div class="row">
+      <button type="button" class="btn btn--primary" data-accion="nube-sincronizar"><span aria-hidden="true">🔄</span>Sincronizar ahora</button>
+      <button type="button" class="btn" data-accion="nube-subir"><span aria-hidden="true">⬆️</span>Subir este dispositivo a la nube</button>
+      <button type="button" class="btn" data-accion="nube-bajar"><span aria-hidden="true">⬇️</span>Traer los datos de la nube</button>
+      <button type="button" class="btn" data-accion="nube-contrasena"><span aria-hidden="true">🔑</span>Cambiar contraseña</button>
+      <button type="button" class="btn btn--danger" data-accion="nube-borrar-remoto"><span aria-hidden="true">🗑️</span>Borrar la copia de la nube</button>
+      <button type="button" class="btn btn--ghost" data-accion="nube-salir"><span aria-hidden="true">🚪</span>Cerrar sesión</button>
+    </div>
+  </section>`;
+}
+
+/* ---------------------------------------------------------
    Primer arranque e inicialización
    --------------------------------------------------------- */
 function primerArranque() {
@@ -3356,6 +3884,7 @@ function init() {
       pintarNavegacion();
       irA('hoy');
       if (esNuevo) primerArranque();
+      iniciarNube();
       if (!Store.disponible) {
         toast('El almacenamiento local está bloqueado en este contexto: los datos no se conservarán al recargar', 'error');
       }

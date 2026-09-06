@@ -56,6 +56,10 @@
             <strong id="header-date">—</strong>
             <span id="header-program">Cargando…</span>
           </p>
+          <button class="btn btn--cuenta" id="cuenta-btn" type="button" data-accion="cuenta">
+            <span id="cuenta-icono" aria-hidden="true">🔒</span>
+            <span id="cuenta-texto">Acceso</span>
+          </button>
           <button
             class="btn btn--icon theme-toggle"
             id="theme-toggle"
@@ -158,6 +162,10 @@
 
     <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
+    <!-- Cliente de Supabase: control de acceso y sincronización.
+         Si no se puede descargar, la aplicación sigue funcionando solo en local. -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js"></script>
+    <script src="nube.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
