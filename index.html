@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mi Plan de Dieta — Seguimiento personal de dieta, comidas y compra semanal</title>
+    <meta
+      name="description"
+      content="Aplicación local para seguir una dieta de seis meses con menú cíclico de dos semanas, control de cumplimiento, lista de la compra y excepciones."
+    />
+    <meta name="theme-color" content="#eef2e6" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234e7a5c'/%3E%3Cpath d='M16 24c0-7 3-11 8-12-1 8-4 11-8 12Zm0 0C16 17 13 13 8 12c1 8 4 11 8 12Z' fill='%23f3f6ec'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+    <link
+      href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=zodiak@500,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido principal</a>
+
+    <!-- ============ Cabecera ============ -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand">
+          <svg width="38" height="38" viewBox="0 0 32 32" role="img" aria-label="Logotipo de Mi Plan de Dieta">
+            <circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path
+              d="M16 25c0-7.5 3.2-11.8 8.5-12.8C23.4 20.7 20.2 24 16 25Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M16 25c0-7.5-3.2-11.8-8.5-12.8C8.6 20.7 11.8 24 16 25Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+            <path d="M16 25V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+          <div>
+            <h1>Mi Plan de Dieta</h1>
+            <span class="brand-sub">Seguimiento personal de dieta, comidas y compra semanal</span>
+          </div>
+        </div>
+
+        <div class="header-meta">
+          <p class="header-status" id="header-status">
+            <strong id="header-date">—</strong>
+            <span id="header-program">Cargando…</span>
+          </p>
+          <button
+            class="btn btn--icon theme-toggle"
+            id="theme-toggle"
+            type="button"
+            aria-label="Cambiar tema de color"
+            title="Cambiar tema de color"
+          >
+            <span id="theme-icon" aria-hidden="true">🌙</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ Navegación de escritorio ============ -->
+    <nav class="main-nav" aria-label="Navegación principal">
+      <ul class="nav-list" id="nav-desktop"></ul>
+    </nav>
+
+    <!-- ============ Contenido ============ -->
+    <main id="contenido">
+      <p class="visually-hidden" id="live-region" role="status" aria-live="polite"></p>
+
+      <section class="view" id="view-hoy" aria-labelledby="h-hoy" tabindex="-1">
+        <div class="view-head">
+          <h2 id="h-hoy">🌞 Hoy</h2>
+          <p>Registra el desayuno, la comida y la cena de hoy.</p>
+        </div>
+        <div id="hoy-content"></div>
+      </section>
+
+      <section class="view" id="view-semana" hidden aria-labelledby="h-semana" tabindex="-1">
+        <div class="view-head">
+          <h2 id="h-semana">🗓️ Semana</h2>
+          <p>Vista de lunes a domingo con el menú y el seguimiento de cada día.</p>
+        </div>
+        <div id="semana-content"></div>
+      </section>
+
+      <section class="view" id="view-control" hidden aria-labelledby="h-control" tabindex="-1">
+        <div class="view-head">
+          <h2 id="h-control">✅ Control</h2>
+          <p>Cumplimiento detallado de la semana seleccionada.</p>
+        </div>
+        <div id="control-content"></div>
+      </section>
+
+      <section class="view" id="view-compra" hidden aria-labelledby="h-compra" tabindex="-1">
+        <div class="view-head">
+          <h2 id="h-compra">🛒 Compra</h2>
+          <p>Por defecto se muestra la lista de la semana siguiente, porque la compra se hace el fin de semana anterior.</p>
+        </div>
+        <div id="compra-content"></div>
+      </section>
+
+      <section class="view" id="view-progreso" hidden aria-labelledby="h-progreso" tabindex="-1">
+        <div class="view-head">
+          <h2 id="h-progreso">📈 Progreso del programa</h2>
+          <p>Resumen de los seis meses de dieta.</p>
+        </div>
+        <div id="progreso-content"></div>
+      </section>
+
+      <section class="view" id="view-excepciones" hidden aria-labelledby="h-excepciones" tabindex="-1">
+        <div class="view-head">
+          <h2 id="h-excepciones">🎉 Excepciones (fechas especiales)</h2>
+          <p>Periodos en los que la dieta se puede saltar sin contar como incumplimiento.</p>
+        </div>
+        <div id="excepciones-content"></div>
+      </section>
+
+      <section class="view" id="view-config" hidden aria-labelledby="h-config" tabindex="-1">
+        <div class="view-head">
+          <h2 id="h-config">⚙️ Configuración</h2>
+          <p>Programa, menú, datos y preferencias.</p>
+        </div>
+        <div id="config-content"></div>
+      </section>
+    </main>
+
+    <!-- ============ Navegación móvil ============ -->
+    <nav class="mobile-nav" aria-label="Navegación principal (móvil)">
+      <ul class="nav-list" id="nav-mobile"></ul>
+    </nav>
+
+    <!-- ============ Modal genérico ============ -->
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <div
+        class="modal"
+        id="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        aria-describedby="modal-body"
+      >
+        <h2 id="modal-title">Título</h2>
+        <div id="modal-body"></div>
+        <div class="modal-actions" id="modal-actions"></div>
+      </div>
+    </div>
+
+    <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
