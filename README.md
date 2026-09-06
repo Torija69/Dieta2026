@@ -201,6 +201,16 @@ cuando no hay sesión), pero no se muestran en la pantalla de inicio.
   datos es la seguridad a nivel de fila (RLS)** del servidor: sin una sesión válida no se puede
   leer nada de la nube.
 
+### Cerrar sesión y ver la contraseña
+
+- La cabecera muestra un botón con una flecha de salida, a la derecha del estado de la cuenta, que
+  **cierra la sesión en un clic** (pide confirmación antes). Solo aparece cuando hay sesión iniciada.
+  También se puede cerrar sesión desde *Ajustes → Cuenta y sincronización* y desde el botón de cuenta.
+- Todos los campos de contraseña (pantalla de acceso, formulario de entrada y cambio de contraseña)
+  llevan un botón con un ojo para **mostrar u ocultar** lo escrito. El botón usa `aria-pressed` y
+  cambia su etiqueta entre «Mostrar la contraseña» y «Ocultar la contraseña», de modo que el estado
+  no depende solo del icono.
+
 ### Confirmación de correo
 
 El proyecto tiene **desactivada** la confirmación por correo (*Authentication → Sign In /

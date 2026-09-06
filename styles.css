@@ -299,6 +299,7 @@ a {
   }
 
   .btn--cuenta,
+  .btn--salir,
   .theme-toggle {
     flex: none;
   }
@@ -1449,4 +1450,42 @@ body.bloqueado .skip-link {
 /* `hidden` debe ganar a los display de los componentes (por ejemplo .btn). */
 [hidden] {
   display: none !important;
+}
+
+/* ---------------------------------------------------------
+   Campo de contraseña con botón de ver u ocultar
+   --------------------------------------------------------- */
+.campo-clave {
+  position: relative;
+  display: block;
+}
+
+.campo-clave input {
+  padding-right: 3.1rem;
+}
+
+.btn--ojo {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  transform: translateY(-50%);
+  min-height: 2.1rem;
+  padding: 0 var(--space-2);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--text-sm);
+}
+
+.btn--ojo:hover {
+  background: var(--bg-alt);
+}
+
+.btn--ojo[aria-pressed='true'] {
+  color: var(--accent-strong);
+}
+
+/* Botón de cerrar sesión de la cabecera. */
+.btn--salir[aria-label] {
+  color: var(--accent-strong);
 }

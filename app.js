@@ -3264,6 +3264,9 @@ function manejarClick(ev) {
     case 'acceso-recuperar':
       formularioAcceso('recuperar');
       return;
+    case 'ver-clave':
+      alternarVerClave(btn);
+      return;
     case 'acceso-sin-conexion':
       Bloqueo.permitidoAhora = true;
       aplicarBloqueo(false);
@@ -3413,6 +3416,43 @@ function pintarCuenta() {
   );
   btn.title = correo || 'Acceso y sincronización';
   btn.classList.toggle('btn--cuenta-activa', Nube.conectado());
+  const salir = $('#salir-btn');
+  if (salir) {
+    salir.hidden = !Nube.conectado();
+    salir.setAttribute(
+      'aria-label',
+      correo ? `Cerrar la sesión de ${correo}` : 'Cerrar sesión'
+    );
+  }
+}
+
+/**
+ * Alterna entre ver y ocultar una contraseña. El botón vive dentro de un
+ * contenedor `.campo-clave` junto al campo al que afecta.
+ */
+function alternarVerClave(boton) {
+  const caja = boton.closest('.campo-clave');
+  if (!caja) return;
+  const campo = caja.querySelector('input');
+  if (!campo) return;
+  const visible = campo.type === 'text';
+  campo.type = visible ? 'password' : 'text';
+  boton.setAttribute('aria-pressed', visible ? 'false' : 'true');
+  const etiqueta = visible ? 'Mostrar la contraseña' : 'Ocultar la contraseña';
+  boton.setAttribute('aria-label', etiqueta);
+  boton.title = etiqueta;
+  const icono = boton.querySelector('span');
+  if (icono) icono.textContent = visible ? '👁️' : '🙈';
+  campo.focus();
+}
+
+/** Devuelve el HTML de un campo de contraseña con el botón de ver u ocultar. */
+function campoClave(id, autocompletar) {
+  return `<div class="campo-clave">
+      <input type="password" id="${id}" autocomplete="${autocompletar}" minlength="6" required />
+      <button type="button" class="btn btn--ojo" data-accion="ver-clave" aria-pressed="false"
+        aria-label="Mostrar la contraseña" title="Mostrar la contraseña"><span aria-hidden="true">👁️</span></button>
+    </div>`;
 }
 
 /** Arranca la capa de nube y sincroniza si ya hay sesión abierta. */
@@ -3646,9 +3686,7 @@ function formularioAcceso(modo) {
     modo === 'recuperar'
       ? ''
       : `<div class="field"><label for="ac-pass">Contraseña</label>
-          <input type="password" id="ac-pass" autocomplete="${
-            modo === 'registrar' ? 'new-password' : 'current-password'
-          }" minlength="6" required />
+          ${campoClave('ac-pass', modo === 'registrar' ? 'new-password' : 'current-password')}
           ${modo === 'registrar' ? '<p class="hint">Mínimo 6 caracteres.</p>' : ''}</div>`;
   const explicacion = {
     entrar: 'Entra para sincronizar tus registros entre el móvil y el ordenador.',
@@ -3742,9 +3780,9 @@ function formularioNuevaContrasena() {
   abrirModal({
     titulo: 'Nueva contraseña',
     cuerpo: `<div class="field"><label for="ac-pass1">Contraseña nueva</label>
-        <input type="password" id="ac-pass1" autocomplete="new-password" minlength="6" /></div>
+        ${campoClave('ac-pass1', 'new-password')}</div>
       <div class="field"><label for="ac-pass2">Repite la contraseña</label>
-        <input type="password" id="ac-pass2" autocomplete="new-password" minlength="6" /></div>
+        ${campoClave('ac-pass2', 'new-password')}</div>
       <p class="hint" id="ac-aviso2" role="status" aria-live="polite"></p>`,
     alAbrir: () => $('#ac-pass1') && $('#ac-pass1').focus(),
     acciones: [

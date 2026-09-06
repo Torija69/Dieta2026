@@ -42,7 +42,19 @@
           </div>
           <div class="field">
             <label for="acceso-pass">Contraseña</label>
-            <input type="password" id="acceso-pass" autocomplete="current-password" required />
+            <div class="campo-clave">
+              <input type="password" id="acceso-pass" autocomplete="current-password" required />
+              <button
+                class="btn btn--ojo"
+                type="button"
+                data-accion="ver-clave"
+                aria-pressed="false"
+                aria-label="Mostrar la contraseña"
+                title="Mostrar la contraseña"
+              >
+                <span aria-hidden="true">👁️</span>
+              </button>
+            </div>
           </div>
           <p class="hint acceso-aviso" id="acceso-aviso" role="status" aria-live="polite"></p>
           <button class="btn btn--primary btn--block" type="submit" id="acceso-entrar">
@@ -101,6 +113,26 @@
           <button class="btn btn--cuenta" id="cuenta-btn" type="button" data-accion="cuenta">
             <span id="cuenta-icono" aria-hidden="true">🔒</span>
             <span id="cuenta-texto">Acceso</span>
+          </button>
+          <button
+            class="btn btn--icon btn--salir"
+            id="salir-btn"
+            type="button"
+            data-accion="nube-salir"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            hidden
+          >
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true" focusable="false">
+              <path
+                d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13A1.5 1.5 0 0 1 18.5 20H15"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+              <path d="M10 8l-4 4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M6 12h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
           </button>
           <button
             class="btn btn--icon theme-toggle"

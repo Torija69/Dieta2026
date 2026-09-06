@@ -137,7 +137,18 @@ const Nube = {
   },
 
   async salir() {
-    if (this.pendiente) await this.subirAhora();
+    /* Si queda algo por subir se intenta, pero con un límite de tiempo: cerrar
+       sesión nunca debe quedarse esperando a la red. */
+    if (this.pendiente) {
+      try {
+        await Promise.race([
+          this.subirAhora(),
+          new Promise((resolver) => setTimeout(resolver, 6000)),
+        ]);
+      } catch (e) {
+        console.warn('No se pudo subir el último cambio antes de salir', e);
+      }
+    }
     /* Ámbito local: borra la sesión de este dispositivo sin llamar al servidor,
        de modo que cerrar sesión funciona incluso sin conexión. */
     try {
