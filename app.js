@@ -3258,6 +3258,17 @@ function manejarClick(ev) {
     case 'nube-salir':
       cerrarSesionNube();
       return;
+    case 'acceso-registrar':
+      formularioAcceso('registrar');
+      return;
+    case 'acceso-recuperar':
+      formularioAcceso('recuperar');
+      return;
+    case 'acceso-sin-conexion':
+      Bloqueo.permitidoAhora = true;
+      aplicarBloqueo(false);
+      toast('Consultando los datos guardados en este dispositivo');
+      return;
     case 'nube-sincronizar':
       sincronizarAhora();
       return;
@@ -3364,6 +3375,15 @@ function manejarCambio(ev) {
       state.settings.mostrarFotosResumen = el.checked;
       guardar('Cambios guardados');
       return;
+    case 'cfg-bloqueo':
+      Bloqueo.fijar(el.checked);
+      Bloqueo.permitidoAhora = false;
+      toast(
+        el.checked
+          ? 'Cambios guardados: al abrir la aplicación se pedirá la contraseña'
+          : 'Cambios guardados: la aplicación se abrirá sin pedir la contraseña'
+      );
+      return;
     case 'cfg-futuras':
       state.settings.permitirRegistrosFuturos = el.checked;
       actualizar('Cambios guardados');
@@ -3400,16 +3420,22 @@ function iniciarNube() {
   Nube.init()
     .then((listo) => {
       pintarCuenta();
+      aplicarBloqueo(false);
       if (!listo) return;
+      if (Nube.conectado()) sincronizacionInicial();
       Nube.alCambiar((evento) => {
         pintarCuenta();
+        aplicarBloqueo(false);
         if (evento === 'PASSWORD_RECOVERY') formularioNuevaContrasena();
-        if (evento === 'SIGNED_IN') sincronizacionInicial();
         if (evento === 'SIGNED_OUT') render();
       });
       if (Nube.conectado()) sincronizacionInicial();
     })
-    .catch((e) => console.warn('Nube no disponible', e));
+    .catch((e) => {
+      console.warn('Nube no disponible', e);
+      Bloqueo.permitidoAhora = true;
+      aplicarBloqueo(false);
+    });
 }
 
 /** ¿El dispositivo tiene datos propios que merezca la pena conservar? */
@@ -3425,13 +3451,29 @@ function hayDatosLocales() {
  * Compara la copia local con la de la nube y deja la más reciente en los dos sitios.
  * Criterio: gana la que se guardó más tarde (marca `meta.actualizadoEn`).
  */
-async function sincronizacionInicial() {
-  if (!Nube.conectado()) return;
+/** Evita que dos sincronizaciones iniciales se solapen. */
+let sincronizando = false;
+
+/** Rechaza si la promesa tarda más de `ms` para no dejar la interfaz colgada. */
+function conLimite(promesa, ms, mensaje) {
+  return Promise.race([
+    promesa,
+    new Promise((_, rechazar) => setTimeout(() => rechazar(new Error(mensaje)), ms)),
+  ]);
+}
+
+async function sincronizacionInicial(reintento) {
+  if (!Nube.conectado() || sincronizando) return;
+  sincronizando = true;
   Nube.estado = 'sincronizando';
   Nube.detalle = '';
   pintarCuenta();
   try {
-    const remoto = await Nube.descargar();
+    const remoto = await conLimite(
+      Nube.descargar(),
+      20000,
+      'el servidor ha tardado demasiado en responder'
+    );
     if (!remoto || !remoto.datos || !Object.keys(remoto.datos).length) {
       await subirTodoALaNube();
       toast('Datos subidos a la nube');
@@ -3453,8 +3495,34 @@ async function sincronizacionInicial() {
     Nube.estado = 'error';
     Nube.detalle = e.message;
     pintarCuenta();
-    toast(`No se pudo sincronizar: ${e.message}`, 'error');
+    if (reintento) {
+      toast(`No se pudo sincronizar: ${e.message}`, 'error');
+    } else {
+      /* Un primer fallo suele ser una conexión lenta: se vuelve a intentar solo. */
+      window.setTimeout(() => {
+        sincronizando = false;
+        sincronizacionInicial(true);
+      }, 3000);
+    }
+  } finally {
+    sincronizando = false;
+    quizasPrimerArranque();
   }
+}
+
+/**
+ * Muestra la pantalla de bienvenida si quedó pendiente por el bloqueo y, una vez
+ * dentro, resulta que no hay datos ni en el dispositivo ni en la nube.
+ */
+function quizasPrimerArranque() {
+  if (!ui.primerArranquePendiente) return;
+  if (document.body.classList.contains('bloqueado')) return;
+  if (hayDatosLocales()) {
+    ui.primerArranquePendiente = false;
+    return;
+  }
+  ui.primerArranquePendiente = false;
+  primerArranque();
 }
 
 /** Sustituye el estado local por el de la nube. */
@@ -3585,8 +3653,9 @@ function formularioAcceso(modo) {
   const explicacion = {
     entrar: 'Entra para sincronizar tus registros entre el móvil y el ordenador.',
     registrar:
-      'Crea una cuenta con tu correo. Recibirás un mensaje de confirmación; hasta que lo confirmes podrás seguir usando la aplicación en local.',
-    recuperar: 'Te enviaremos un enlace al correo para establecer una contraseña nueva.',
+      'Crea una cuenta con tu correo y una contraseña. La cuenta se activa al momento: no hay que confirmar ningún mensaje.',
+    recuperar:
+      'Te enviaremos un enlace al correo para establecer una contraseña nueva. El envío depende del servicio de correo del servidor, así que el mensaje puede tardar o no llegar; si no lo recibes, cambia la contraseña desde el panel de Supabase.',
   };
   const enlaces = {
     entrar: `<div class="row">
@@ -3654,6 +3723,7 @@ function formularioAcceso(modo) {
                 toast(`Sesión iniciada como ${email}`);
               }
               pintarCuenta();
+              if (modo !== 'recuperar' && Nube.conectado()) sincronizacionInicial();
             })
             .catch((e) => {
               const a = $('#ac-aviso');
@@ -3710,6 +3780,7 @@ function formularioNuevaContrasena() {
 }
 
 function cerrarSesionNube() {
+  Bloqueo.permitidoAhora = false;
   confirmar({
     titulo: 'Cerrar sesión',
     mensaje:
@@ -3825,6 +3896,12 @@ function tarjetaNube() {
     <p class="hint">Se guarda primero en el dispositivo y después en la nube, así que puedes seguir registrando
     comidas sin conexión: los cambios se envían cuando vuelve la conexión. Si editas desde dos dispositivos, se
     conserva la versión guardada más tarde.</p>
+    <div class="check-row">
+      <input type="checkbox" id="cfg-bloqueo" ${Bloqueo.activo() ? 'checked' : ''} data-accion="cfg-bloqueo" />
+      <label for="cfg-bloqueo">Pedir correo y contraseña al abrir la aplicación en este dispositivo</label>
+    </div>
+    <p class="hint">Con esta opción activada, al abrir la página se muestra una pantalla de acceso y no se ve
+    ningún dato hasta que entras. Es una preferencia de este dispositivo y no se sincroniza.</p>
     <div class="row">
       <button type="button" class="btn btn--primary" data-accion="nube-sincronizar"><span aria-hidden="true">🔄</span>Sincronizar ahora</button>
       <button type="button" class="btn" data-accion="nube-subir"><span aria-hidden="true">⬆️</span>Subir este dispositivo a la nube</button>
@@ -3834,6 +3911,129 @@ function tarjetaNube() {
       <button type="button" class="btn btn--ghost" data-accion="nube-salir"><span aria-hidden="true">🚪</span>Cerrar sesión</button>
     </div>
   </section>`;
+}
+
+/* ---------------------------------------------------------
+   14. Bloqueo de acceso al abrir la aplicación
+
+   Es una preferencia de cada dispositivo, no de la cuenta: se guarda
+   aparte de `state` para poder leerla antes de cargar nada más.
+   --------------------------------------------------------- */
+
+const CLAVE_BLOQUEO = 'miPlanDieta.v1.bloqueo';
+
+const Bloqueo = {
+  /** ¿Hay que pedir correo y contraseña al abrir? Activado por defecto. */
+  activo() {
+    try {
+      const v = localStorage.getItem(CLAVE_BLOQUEO);
+      return v === null ? true : v === '1';
+    } catch (e) {
+      return false;
+    }
+  },
+
+  fijar(valor) {
+    try {
+      localStorage.setItem(CLAVE_BLOQUEO, valor ? '1' : '0');
+    } catch (e) {
+      /* sin almacenamiento no se puede recordar la preferencia */
+    }
+  },
+
+  /** Permiso concedido solo para esta visita (caso «sin conexión»). */
+  permitidoAhora: false,
+};
+
+/** Aplica o retira la pantalla de acceso según la sesión y la preferencia. */
+function aplicarBloqueo(comprobando) {
+  const pantalla = $('#pantalla-acceso');
+  if (!pantalla) return;
+
+  const sub = $('#acceso-sub');
+  const form = $('#acceso-form');
+  const enlaces = $('#acceso-enlaces');
+  const nota = $('#acceso-nota');
+  const botonSinConexion = $('#acceso-sin-conexion');
+
+  /* Mientras se comprueba la sesión se tapa la aplicación sin preguntar nada:
+     todavía no se sabe si hay sesión guardada. */
+  if (comprobando) {
+    pantalla.hidden = false;
+    document.body.classList.add('bloqueado');
+    sub.textContent = 'Comprobando la sesión…';
+    form.hidden = true;
+    enlaces.hidden = true;
+    nota.hidden = true;
+    botonSinConexion.hidden = true;
+    return;
+  }
+
+  const debeBloquear =
+    Bloqueo.activo() && Nube.disponible() && !Nube.conectado() && !Bloqueo.permitidoAhora;
+
+  if (!debeBloquear) {
+    pantalla.hidden = true;
+    document.body.classList.remove('bloqueado');
+    return;
+  }
+
+  pantalla.hidden = false;
+  document.body.classList.add('bloqueado');
+
+  const sinConexion = navigator.onLine === false;
+  sub.textContent = sinConexion
+    ? 'No hay conexión en este momento.'
+    : 'Introduce tu correo y tu contraseña para ver tus datos.';
+  form.hidden = sinConexion;
+  enlaces.hidden = sinConexion;
+  nota.hidden = !sinConexion;
+  botonSinConexion.hidden = !sinConexion;
+
+  if (!sinConexion) {
+    const email = $('#acceso-email');
+    if (email && document.activeElement !== email) email.focus();
+  } else if (!botonSinConexion.hidden) {
+    botonSinConexion.focus();
+  }
+}
+
+/** Envío del formulario de la pantalla de acceso. */
+function entrarDesdePantalla(ev) {
+  if (ev) ev.preventDefault();
+  const email = ($('#acceso-email').value || '').trim();
+  const pass = $('#acceso-pass').value || '';
+  const aviso = $('#acceso-aviso');
+  const boton = $('#acceso-entrar');
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    aviso.textContent = 'Escribe una dirección de correo válida.';
+    $('#acceso-email').focus();
+    return;
+  }
+  if (pass.length < 6) {
+    aviso.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    $('#acceso-pass').focus();
+    return;
+  }
+
+  aviso.textContent = 'Conectando…';
+  boton.disabled = true;
+  Nube.entrar(email, pass)
+    .then(() => {
+      aviso.textContent = '';
+      $('#acceso-pass').value = '';
+      aplicarBloqueo(false);
+      toast(`Sesión iniciada como ${email}`);
+      sincronizacionInicial();
+    })
+    .catch((e) => {
+      aviso.textContent = e.message;
+      $('#acceso-pass').focus();
+    })
+    .then(() => {
+      boton.disabled = false;
+    });
 }
 
 /* ---------------------------------------------------------
@@ -3883,7 +4083,17 @@ function init() {
       aplicarTema();
       pintarNavegacion();
       irA('hoy');
-      if (esNuevo) primerArranque();
+      /* Si el bloqueo está activo se tapa la aplicación antes de mostrar nada. */
+      if (Bloqueo.activo() && window.supabase) {
+        document.body.classList.add('bloqueado');
+        $('#pantalla-acceso').hidden = false;
+        aplicarBloqueo(true);
+      }
+      ui.primerArranquePendiente = esNuevo;
+      if (esNuevo && !document.body.classList.contains('bloqueado')) {
+        ui.primerArranquePendiente = false;
+        primerArranque();
+      }
       iniciarNube();
       if (!Store.disponible) {
         toast('El almacenamiento local está bloqueado en este contexto: los datos no se conservarán al recargar', 'error');
@@ -3893,6 +4103,9 @@ function init() {
   // Eventos globales
   document.addEventListener('click', manejarClick);
   document.addEventListener('change', manejarCambio);
+  $('#acceso-form').addEventListener('submit', entrarDesdePantalla);
+  window.addEventListener('online', () => aplicarBloqueo(false));
+  window.addEventListener('offline', () => aplicarBloqueo(false));
   $('#theme-toggle').addEventListener('click', alternarTema);
   $('#modal-backdrop').addEventListener('mousedown', (ev) => {
     if (ev.target === $('#modal-backdrop')) cerrarModal();

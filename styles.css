@@ -546,6 +546,8 @@ label {
 }
 
 input[type='text'],
+input[type='email'],
+input[type='password'],
 input[type='date'],
 input[type='number'],
 select,
@@ -1369,4 +1371,82 @@ dl.grid {
     border: 1px solid #999;
     break-inside: avoid;
   }
+}
+
+/* ---------------------------------------------------------
+   Pantalla de acceso (bloqueo opcional al abrir)
+   --------------------------------------------------------- */
+.acceso {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--bg);
+  overflow: auto;
+}
+
+.acceso-caja {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.acceso-caja svg {
+  color: var(--accent);
+}
+
+.acceso-caja h2 {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-xl);
+}
+
+.acceso-sub {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+}
+
+.acceso-caja form {
+  text-align: left;
+}
+
+.acceso-aviso:empty {
+  display: none;
+}
+
+.acceso-aviso {
+  margin-bottom: var(--space-3);
+}
+
+.acceso-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.acceso-nota {
+  margin-top: var(--space-4);
+}
+
+/* Con la pantalla de acceso visible se oculta el resto de la aplicación. */
+body.bloqueado .app-header,
+body.bloqueado .main-nav,
+body.bloqueado .mobile-nav,
+body.bloqueado #contenido,
+body.bloqueado .skip-link {
+  display: none;
+}
+
+/* `hidden` debe ganar a los display de los componentes (por ejemplo .btn). */
+[hidden] {
+  display: none !important;
 }

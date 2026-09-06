@@ -76,7 +76,10 @@ const Nube = {
 
     this.cliente.auth.onAuthStateChange((evento, sesion) => {
       this.fijarSesion(sesion);
-      this.avisar(evento);
+      /* La librería mantiene un cerrojo mientras ejecuta este callback: si desde
+         aquí se llamara a otras funciones suyas (leer la tabla, subir fotos…) se
+         quedaría bloqueada. Por eso se avisa a la aplicación fuera del cerrojo. */
+      setTimeout(() => this.avisar(evento), 0);
     });
 
     window.addEventListener('online', () => {

@@ -180,8 +180,34 @@ donde puedes revisar y modificar las fechas antes de guardar.
 
 ## Cuenta y sincronización con la nube (Supabase)
 
-La aplicación funciona **sin cuenta**: todo se guarda en el propio navegador. Además, de forma
-**opcional**, puedes crear una cuenta para que los datos viajen entre el móvil y el ordenador.
+La aplicación puede funcionar **sin cuenta** (todo se guarda en el propio navegador) o **con
+cuenta**, para que los datos viajen entre el móvil y el ordenador.
+
+### Pantalla de acceso al abrir
+
+Por defecto, al abrir la página aparece una **pantalla de acceso** que pide correo y contraseña y
+no muestra ningún dato hasta que se entra. Desde ahí se puede entrar, crear una cuenta o pedir un
+enlace para restablecer la contraseña.
+
+- La preferencia se controla en *Ajustes → Cuenta y sincronización → «Pedir correo y contraseña al
+  abrir la aplicación en este dispositivo»*. Es una preferencia **de cada dispositivo** (se guarda
+  en `localStorage`, clave `miPlanDieta.v1.bloqueo`) y no se sincroniza.
+- Si en ese momento no hay conexión, la pantalla ofrece **«Continuar sin conexión»** para seguir
+  consultando los datos guardados en el dispositivo, ya que la contraseña no se puede comprobar.
+- Esta pantalla protege lo que se ve en un dispositivo compartido, pero **la protección real de los
+  datos es la seguridad a nivel de fila (RLS)** del servidor: sin una sesión válida no se puede
+  leer nada de la nube.
+
+### Confirmación de correo
+
+El proyecto tiene **desactivada** la confirmación por correo (*Authentication → Sign In /
+Providers → User Signups → Confirm email*), porque el servicio de correo integrado de Supabase
+está muy limitado en el plan gratuito y los mensajes no siempre llegan. Con ese ajuste, la cuenta
+queda activa en el momento en que se crea. Si algún día se quieren enviar correos de verdad
+(confirmaciones o recuperación de contraseña), hay que configurar un **SMTP propio** en
+*Authentication → Emails → SMTP Settings* (Resend, Brevo, SendGrid…). Mientras no lo haya, la
+contraseña se puede cambiar desde la propia aplicación estando dentro, o desde el panel de
+Supabase en *Authentication → Users*.
 
 ### Cómo se controla el acceso desde la web
 
