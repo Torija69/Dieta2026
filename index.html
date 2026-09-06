@@ -50,10 +50,10 @@
           </button>
         </form>
 
-        <div class="acceso-enlaces" id="acceso-enlaces" hidden>
-          <button class="btn btn--ghost btn--sm" type="button" data-accion="acceso-registrar">Crear una cuenta</button>
-          <button class="btn btn--ghost btn--sm" type="button" data-accion="acceso-recuperar">He olvidado la contraseña</button>
-        </div>
+        <!-- Las cuentas se crean desde el panel de Supabase, así que la pantalla de
+             acceso no ofrece registro ni recuperación de contraseña. El contenedor
+             se mantiene (vacío y oculto) porque la lógica de la pantalla lo usa. -->
+        <div class="acceso-enlaces" id="acceso-enlaces" hidden></div>
 
         <p class="hint acceso-nota" id="acceso-nota" hidden>
           Sin conexión no se puede comprobar la contraseña. Puedes seguir consultando los datos

@@ -186,8 +186,11 @@ cuenta**, para que los datos viajen entre el móvil y el ordenador.
 ### Pantalla de acceso al abrir
 
 Por defecto, al abrir la página aparece una **pantalla de acceso** que pide correo y contraseña y
-no muestra ningún dato hasta que se entra. Desde ahí se puede entrar, crear una cuenta o pedir un
-enlace para restablecer la contraseña.
+no muestra ningún dato hasta que se entra. Solo ofrece el botón **Entrar**: no incluye registro ni
+recuperación de contraseña, porque **las cuentas se crean a mano en el panel de Supabase**
+(*Authentication → Users → Add user*, marcando *Auto Confirm User*). Los formularios de registro y
+recuperación siguen existiendo en el código (se abren desde *Ajustes → Cuenta y sincronización*
+cuando no hay sesión), pero no se muestran en la pantalla de inicio.
 
 - La preferencia se controla en *Ajustes → Cuenta y sincronización → «Pedir correo y contraseña al
   abrir la aplicación en este dispositivo»*. Es una preferencia **de cada dispositivo** (se guarda

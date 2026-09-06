@@ -3986,7 +3986,9 @@ function aplicarBloqueo(comprobando) {
     ? 'No hay conexión en este momento.'
     : 'Introduce tu correo y tu contraseña para ver tus datos.';
   form.hidden = sinConexion;
-  enlaces.hidden = sinConexion;
+  /* Sin registro ni recuperación en la pantalla de inicio: las cuentas se crean
+     desde el panel de Supabase. */
+  enlaces.hidden = true;
   nota.hidden = !sinConexion;
   botonSinConexion.hidden = !sinConexion;
 
