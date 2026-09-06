@@ -12,6 +12,11 @@ guarda en el propio dispositivo.
 
 ## Cómo abrir la aplicación
 
+**En línea:** la versión publicada está en **https://torija69.github.io/Dieta2026/**. Se puede
+añadir a la pantalla de inicio del móvil como un acceso directo.
+
+**En local:**
+
 1. Descarga o copia la carpeta completa del proyecto (debe contener `index.html`,
    `styles.css` y `app.js` en el mismo directorio).
 2. Haz doble clic en `index.html`, o ábrelo desde el navegador con **Archivo → Abrir**.
@@ -252,7 +257,8 @@ funciones, pero no una URL para publicar `index.html`. Opciones sencillas para t
 en una dirección web:
 
 - **GitHub Pages** desde este mismo repositorio (*Settings → Pages → Deploy from a branch →
-  main → / (root)*).
+  main → / (root)*). Ya está activado: la aplicación está publicada en
+  **https://torija69.github.io/Dieta2026/** y se actualiza en cada `push` a `main`.
 - Cualquier alojamiento estático (Netlify, Vercel, Cloudflare Pages) subiendo los cuatro
   archivos.
 - O simplemente abrir `index.html` en el dispositivo, como hasta ahora.
