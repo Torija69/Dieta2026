@@ -1489,3 +1489,12 @@ body.bloqueado .skip-link {
 .btn--salir[aria-label] {
   color: var(--accent-strong);
 }
+
+/* Línea con la cuenta y la versión en la pantalla Hoy. */
+.linea-sesion {
+  margin-top: var(--space-1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  word-break: break-word;
+}

@@ -201,6 +201,14 @@ cuando no hay sesión), pero no se muestran en la pantalla de inicio.
   datos es la seguridad a nivel de fila (RLS)** del servidor: sin una sesión válida no se puede
   leer nada de la nube.
 
+### Cuenta visible y versión
+
+En la pantalla **Hoy**, justo bajo el título, se indica quién tiene la sesión abierta y la versión del
+programa: «👤 Sesión iniciada como correo@ejemplo.com · 🏷️ Versión 1.4.0». Si no hay sesión, la
+misma línea avisa de que los datos se guardan solo en ese dispositivo. La versión también aparece en
+*Ajustes → Datos* y se define en la constante `VERSION` de `app.js`: al publicar una versión nueva
+basta con cambiarla ahí.
+
 ### Cambiar la contraseña
 
 La aplicación **no permite crear cuentas**: las da de alta el administrador desde el panel de

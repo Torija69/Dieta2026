@@ -21,6 +21,9 @@
 /* ---------------------------------------------------------
    1. Utilidades generales y de fechas
    --------------------------------------------------------- */
+/** Versión del programa: se muestra en la pantalla Hoy y en Ajustes. */
+const VERSION = '1.4.0';
+
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -2229,6 +2232,9 @@ function renderConfig() {
 
     <section class="card" aria-labelledby="cfg-datos">
       <h3 id="cfg-datos" class="card-title"><span aria-hidden="true">💾</span> Datos</h3>
+      <p class="hint">Programa: <strong>Mi Plan de Dieta</strong> · <span aria-hidden="true">🏷️</span> Versión ${esc(
+        VERSION
+      )}</p>
       <p class="hint">Almacenamiento actual: ${
         Store.disponible ? 'localStorage disponible' : 'localStorage no disponible (datos solo en memoria)'
       } · fotografías en ${esc(Fotos.modo)}.</p>
@@ -3419,6 +3425,7 @@ function pintarCuenta() {
   );
   btn.title = correo || 'Acceso y sincronización';
   btn.classList.toggle('btn--cuenta-activa', Nube.conectado());
+  pintarSesionHoy();
   const salir = $('#salir-btn');
   if (salir) {
     salir.hidden = !Nube.conectado();
@@ -3427,6 +3434,22 @@ function pintarCuenta() {
       correo ? `Cerrar la sesión de ${correo}` : 'Cerrar sesión'
     );
   }
+}
+
+/**
+ * Escribe en la pantalla Hoy quién tiene la sesión abierta y qué versión del
+ * programa se está usando. Con iconos y texto, no solo color.
+ */
+function pintarSesionHoy() {
+  const linea = $('#hoy-sesion');
+  if (!linea) return;
+  const correo = Nube.conectado() ? Nube.correo() : '';
+  const cuenta = correo
+    ? `👤 Sesión iniciada como ${correo}`
+    : Nube.disponible()
+      ? '🔒 Sin sesión: los datos se guardan solo en este dispositivo'
+      : '📴 Modo local: los datos se guardan solo en este dispositivo';
+  linea.textContent = `${cuenta} · 🏷️ Versión ${VERSION}`;
 }
 
 /**
