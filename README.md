@@ -201,6 +201,24 @@ cuando no hay sesión), pero no se muestran en la pantalla de inicio.
   datos es la seguridad a nivel de fila (RLS)** del servidor: sin una sesión válida no se puede
   leer nada de la nube.
 
+### Cambiar la contraseña
+
+La aplicación **no permite crear cuentas**: las da de alta el administrador desde el panel de
+Supabase (*Authentication → Users → Add user*, con *Auto Confirm User* marcado) y el registro está
+cerrado también en el servidor (*Allow new users to sign up* desactivado).
+
+Cambiar la contraseña sí está permitido, en dos sitios:
+
+1. **Desde la pantalla de acceso**, con el enlace «Cambiar la contraseña»: pide correo, contraseña
+   actual y la nueva dos veces. La contraseña actual se comprueba contra el servidor antes de
+   guardar la nueva, así que no sirve para tocar cuentas ajenas. Al guardar se entra ya con la
+   contraseña nueva.
+2. **Con la sesión abierta**, en *Ajustes → Cuenta y sincronización → Cambiar contraseña* o desde el
+   botón de cuenta de la cabecera. También pide la contraseña actual.
+
+No hay recuperación por correo, porque el proyecto no tiene servidor de correo propio configurado.
+Si alguien olvida su contraseña, se le asigna una nueva desde el panel de Supabase.
+
 ### Cerrar sesión y ver la contraseña
 
 - La cabecera muestra un botón con una flecha de salida, a la derecha del estado de la cuenta, que

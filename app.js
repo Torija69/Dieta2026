@@ -3264,6 +3264,9 @@ function manejarClick(ev) {
     case 'acceso-recuperar':
       formularioAcceso('recuperar');
       return;
+    case 'acceso-cambiar-clave':
+      formularioCambioClave(($('#acceso-email').value || '').trim());
+      return;
     case 'ver-clave':
       alternarVerClave(btn);
       return;
@@ -3776,23 +3779,119 @@ function formularioAcceso(modo) {
   });
 }
 
-function formularioNuevaContrasena() {
+/**
+ * Activa o desactiva los botones del modal abierto mientras se espera al
+ * servidor, para que no se pueda pulsar dos veces.
+ */
+function botonesModal(desactivados) {
+  document.querySelectorAll('.modal button').forEach((b) => {
+    b.disabled = desactivados;
+  });
+}
+
+/**
+ * Cambio de contraseña desde la pantalla de acceso. No hace falta tener sesión
+ * abierta: basta con conocer la contraseña actual, que se comprueba contra el
+ * servidor antes de guardar la nueva. No permite crear cuentas.
+ */
+function formularioCambioClave(correoInicial) {
   abrirModal({
-    titulo: 'Nueva contraseña',
-    cuerpo: `<div class="field"><label for="ac-pass1">Contraseña nueva</label>
-        ${campoClave('ac-pass1', 'new-password')}</div>
-      <div class="field"><label for="ac-pass2">Repite la contraseña</label>
-        ${campoClave('ac-pass2', 'new-password')}</div>
-      <p class="hint" id="ac-aviso2" role="status" aria-live="polite"></p>`,
-    alAbrir: () => $('#ac-pass1') && $('#ac-pass1').focus(),
+    titulo: 'Cambiar la contraseña',
+    cuerpo: `<p>Escribe tu contraseña actual y la nueva. Al guardarla entrarás con la nueva contraseña.</p>
+      <div class="field"><label for="cc-correo">Correo electrónico</label>
+        <input type="email" id="cc-correo" autocomplete="username" value="${esc(correoInicial || '')}" required /></div>
+      <div class="field"><label for="cc-actual">Contraseña actual</label>
+        ${campoClave('cc-actual', 'current-password')}</div>
+      <div class="field"><label for="cc-nueva">Contraseña nueva</label>
+        ${campoClave('cc-nueva', 'new-password')}
+        <p class="hint">Mínimo 6 caracteres.</p></div>
+      <div class="field"><label for="cc-nueva2">Repite la contraseña nueva</label>
+        ${campoClave('cc-nueva2', 'new-password')}</div>
+      <p class="hint" id="cc-aviso" role="status" aria-live="polite"></p>
+      <p class="hint">Las cuentas nuevas las crea el administrador: desde aquí solo se puede cambiar la
+      contraseña de una cuenta que ya existe.</p>`,
+    alAbrir: () => {
+      const campo = correoInicial ? $('#cc-actual') : $('#cc-correo');
+      if (campo) campo.focus();
+    },
     acciones: [
       {
         texto: 'Guardar contraseña',
         clase: 'btn--primary',
         onClick: () => {
+          const correo = ($('#cc-correo').value || '').trim();
+          const actual = $('#cc-actual').value || '';
+          const nueva = $('#cc-nueva').value || '';
+          const repetida = $('#cc-nueva2').value || '';
+          const aviso = $('#cc-aviso');
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+            aviso.textContent = 'Escribe una dirección de correo válida.';
+            return false;
+          }
+          if (actual.length < 6) {
+            aviso.textContent = 'Escribe tu contraseña actual.';
+            return false;
+          }
+          if (nueva.length < 6) {
+            aviso.textContent = 'La contraseña nueva debe tener al menos 6 caracteres.';
+            return false;
+          }
+          if (nueva !== repetida) {
+            aviso.textContent = 'Las dos contraseñas nuevas no coinciden.';
+            return false;
+          }
+          if (nueva === actual) {
+            aviso.textContent = 'La contraseña nueva debe ser distinta de la actual.';
+            return false;
+          }
+          aviso.textContent = 'Comprobando…';
+          botonesModal(true);
+          Nube.entrar(correo, actual)
+            .then(() => Nube.cambiarContrasena(nueva))
+            .then(() => {
+              cerrarModal();
+              toast('Cambios guardados: contraseña actualizada');
+              aplicarBloqueo(false);
+              sincronizacionInicial();
+            })
+            .catch((e) => {
+              aviso.textContent = e.message;
+              botonesModal(false);
+            });
+          return false;
+        },
+      },
+      { texto: 'Cancelar', clase: 'btn--ghost', cerrar: true },
+    ],
+  });
+}
+
+function formularioNuevaContrasena() {
+  abrirModal({
+    titulo: 'Nueva contraseña',
+    cuerpo: `<p>Sesión iniciada como <strong>${esc(Nube.correo() || '')}</strong>.</p>
+      <div class="field"><label for="ac-pass0">Contraseña actual</label>
+        ${campoClave('ac-pass0', 'current-password')}</div>
+      <div class="field"><label for="ac-pass1">Contraseña nueva</label>
+        ${campoClave('ac-pass1', 'new-password')}
+        <p class="hint">Mínimo 6 caracteres.</p></div>
+      <div class="field"><label for="ac-pass2">Repite la contraseña</label>
+        ${campoClave('ac-pass2', 'new-password')}</div>
+      <p class="hint" id="ac-aviso2" role="status" aria-live="polite"></p>`,
+    alAbrir: () => $('#ac-pass0') && $('#ac-pass0').focus(),
+    acciones: [
+      {
+        texto: 'Guardar contraseña',
+        clase: 'btn--primary',
+        onClick: () => {
+          const p0 = $('#ac-pass0').value;
           const p1 = $('#ac-pass1').value;
           const p2 = $('#ac-pass2').value;
           const aviso = $('#ac-aviso2');
+          if (p0.length < 6) {
+            aviso.textContent = 'Escribe tu contraseña actual.';
+            return false;
+          }
           if (p1.length < 6) {
             aviso.textContent = 'La contraseña debe tener al menos 6 caracteres.';
             return false;
@@ -3801,13 +3900,23 @@ function formularioNuevaContrasena() {
             aviso.textContent = 'Las dos contraseñas no coinciden.';
             return false;
           }
-          Nube.cambiarContrasena(p1)
+          if (p1 === p0) {
+            aviso.textContent = 'La contraseña nueva debe ser distinta de la actual.';
+            return false;
+          }
+          aviso.textContent = 'Comprobando…';
+          botonesModal(true);
+          /* Se vuelve a entrar con la contraseña actual para confirmar que es
+             quien dice ser antes de cambiarla. */
+          Nube.entrar(Nube.correo(), p0)
+            .then(() => Nube.cambiarContrasena(p1))
             .then(() => {
               cerrarModal();
               toast('Cambios guardados: contraseña actualizada');
             })
             .catch((e) => {
               aviso.textContent = e.message;
+              botonesModal(false);
             });
           return false;
         },
@@ -3914,14 +4023,13 @@ function tarjetaNube() {
   if (!Nube.conectado()) {
     return `<section class="card" aria-labelledby="cfg-nube">
       <h3 id="cfg-nube" class="card-title"><span aria-hidden="true">🔒</span> Cuenta y sincronización</h3>
-      <p>Ahora mismo los datos se guardan solo en este navegador. Si creas una cuenta, tus registros, comentarios y
-      fotografías se copian a la nube y puedes consultarlos desde el móvil y desde el ordenador.</p>
+      <p>Ahora mismo los datos se guardan solo en este navegador. Si entras con tu cuenta, tus registros,
+      comentarios y fotografías se copian a la nube y puedes consultarlos desde el móvil y desde el ordenador.</p>
       <p class="hint">Cada cuenta solo puede leer y escribir sus propios datos: el acceso está restringido en el
-      servidor mediante seguridad a nivel de fila.</p>
+      servidor mediante seguridad a nivel de fila. Las cuentas nuevas las crea el administrador.</p>
       <div class="row">
         <button type="button" class="btn btn--primary" data-accion="nube-entrar"><span aria-hidden="true">🔑</span>Entrar</button>
-        <button type="button" class="btn" data-accion="nube-registrar"><span aria-hidden="true">🆕</span>Crear una cuenta</button>
-        <button type="button" class="btn btn--ghost" data-accion="nube-recuperar"><span aria-hidden="true">✉️</span>He olvidado la contraseña</button>
+        <button type="button" class="btn" data-accion="acceso-cambiar-clave"><span aria-hidden="true">🔁</span>Cambiar la contraseña</button>
       </div>
     </section>`;
   }
@@ -4024,9 +4132,9 @@ function aplicarBloqueo(comprobando) {
     ? 'No hay conexión en este momento.'
     : 'Introduce tu correo y tu contraseña para ver tus datos.';
   form.hidden = sinConexion;
-  /* Sin registro ni recuperación en la pantalla de inicio: las cuentas se crean
-     desde el panel de Supabase. */
-  enlaces.hidden = true;
+  /* Sin registro ni recuperación por correo: solo el cambio de contraseña, que
+     necesita conexión porque se comprueba contra el servidor. */
+  enlaces.hidden = sinConexion;
   nota.hidden = !sinConexion;
   botonSinConexion.hidden = !sinConexion;
 
