@@ -22,7 +22,11 @@
    1. Utilidades generales y de fechas
    --------------------------------------------------------- */
 /** Versión del programa: se muestra en la pantalla Hoy y en Ajustes. */
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
+/** Fecha y hora en que se creó esta versión (hora de Madrid). */
+const VERSION_FECHA = '20/09/2026 14:35';
+/** Texto completo de la versión: número más fecha y hora de creación. */
+const VERSION_TEXTO = `${VERSION} (${VERSION_FECHA})`;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -2236,7 +2240,7 @@ function renderConfig() {
     <section class="card" aria-labelledby="cfg-datos">
       <h3 id="cfg-datos" class="card-title"><span aria-hidden="true">💾</span> Datos</h3>
       <p class="hint">Programa: <strong>Mi Plan de Dieta</strong> · <span aria-hidden="true">🏷️</span> Versión ${esc(
-        VERSION
+        VERSION_TEXTO
       )}</p>
       <p class="hint">Almacenamiento actual: ${
         Store.disponible ? 'localStorage disponible' : 'localStorage no disponible (datos solo en memoria)'
@@ -3452,7 +3456,7 @@ function pintarSesionHoy() {
     : Nube.disponible()
       ? '🔒 Sin sesión: los datos se guardan solo en este dispositivo'
       : '📴 Modo local: los datos se guardan solo en este dispositivo';
-  linea.textContent = `${cuenta} · 🏷️ Versión ${VERSION}`;
+  linea.textContent = `${cuenta} · 🏷️ Versión ${VERSION_TEXTO}`;
 }
 
 /**

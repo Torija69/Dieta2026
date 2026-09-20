@@ -204,10 +204,25 @@ cuando no hay sesión), pero no se muestran en la pantalla de inicio.
 ### Cuenta visible y versión
 
 En la pantalla **Hoy**, justo bajo el título, se indica quién tiene la sesión abierta y la versión del
-programa: «👤 Sesión iniciada como correo@ejemplo.com · 🏷️ Versión 1.4.0». Si no hay sesión, la
-misma línea avisa de que los datos se guardan solo en ese dispositivo. La versión también aparece en
-*Ajustes → Datos* y se define en la constante `VERSION` de `app.js`: al publicar una versión nueva
-basta con cambiarla ahí.
+programa: «👤 Sesión iniciada como correo@ejemplo.com · 🏷️ Versión 1.4.1 (20/09/2026 14:35)». Si no
+hay sesión, la misma línea avisa de que los datos se guardan solo en ese dispositivo. La versión
+también aparece en *Ajustes → Datos*.
+
+La versión se define en dos constantes al principio de `app.js` y **siempre se actualizan juntas**:
+
+- `VERSION`: el número, por ejemplo `'1.4.1'`.
+- `VERSION_FECHA`: la fecha y hora de creación de esa versión en horario de Madrid, con el formato
+  `DD/MM/AAAA HH:MM`.
+
+Cada cambio publicado sube el número y registra el momento exacto en que se creó, de modo que a
+simple vista se sabe si el dispositivo está ejecutando la última versión.
+
+### Historial de versiones
+
+| Versión | Creada           | Cambios                                                              |
+| ------- | ---------------- | -------------------------------------------------------------------- |
+| 1.4.1   | 20/09/2026 14:35 | Los datos se cargan solo con la sesión confirmada y se bloquean las escrituras antes de comprobar el servidor, para que un arranque en blanco no pueda sustituir la copia de la nube. La versión pasa a mostrar su fecha y hora de creación. |
+| 1.4.0   | —                | Cuenta y versión visibles en la pantalla Hoy.                         |
 
 ### Cambiar la contraseña
 
