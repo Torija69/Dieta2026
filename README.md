@@ -221,6 +221,7 @@ simple vista se sabe si el dispositivo está ejecutando la última versión.
 
 | Versión | Creada           | Cambios                                                              |
 | ------- | ---------------- | -------------------------------------------------------------------- |
+| 1.4.2   | 20/09/2026 14:50 | La versión es un dato único: se escribe solo en `VERSION` y `VERSION_FECHA` y de ahí se muestra en la pantalla de acceso, en Hoy, en Ajustes, en «Tu cuenta», en la bienvenida y en los archivos exportados. Nuevo botón «Buscar una versión nueva» que recarga la aplicación saltando la caché del navegador. |
 | 1.4.1   | 20/09/2026 14:35 | Los datos se cargan solo con la sesión confirmada y se bloquean las escrituras antes de comprobar el servidor, para que un arranque en blanco no pueda sustituir la copia de la nube. La versión pasa a mostrar su fecha y hora de creación. |
 | 1.4.0   | —                | Cuenta y versión visibles en la pantalla Hoy.                         |
 

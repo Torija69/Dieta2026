@@ -22,11 +22,15 @@
    1. Utilidades generales y de fechas
    --------------------------------------------------------- */
 /** Versión del programa: se muestra en la pantalla Hoy y en Ajustes. */
-const VERSION = '1.4.1';
+const VERSION = '1.4.2';
 /** Fecha y hora en que se creó esta versión (hora de Madrid). */
-const VERSION_FECHA = '20/09/2026 14:35';
-/** Texto completo de la versión: número más fecha y hora de creación. */
+const VERSION_FECHA = '20/09/2026 14:50';
+/** Texto completo de la versión: número más fecha y hora de creación.
+    ÉSTE es el único sitio del programa donde se escribe la versión: todas las
+    pantallas, los avisos y los archivos exportados leen estas constantes. */
 const VERSION_TEXTO = `${VERSION} (${VERSION_FECHA})`;
+/** Etiqueta con icono, tal como se muestra en la interfaz. */
+const VERSION_ETIQUETA = `🏷️ Versión ${VERSION_TEXTO}`;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -2239,9 +2243,7 @@ function renderConfig() {
 
     <section class="card" aria-labelledby="cfg-datos">
       <h3 id="cfg-datos" class="card-title"><span aria-hidden="true">💾</span> Datos</h3>
-      <p class="hint">Programa: <strong>Mi Plan de Dieta</strong> · <span aria-hidden="true">🏷️</span> Versión ${esc(
-        VERSION_TEXTO
-      )}</p>
+      <p class="hint">Programa: <strong>Mi Plan de Dieta</strong> · ${esc(VERSION_ETIQUETA)}</p>
       <p class="hint">Almacenamiento actual: ${
         Store.disponible ? 'localStorage disponible' : 'localStorage no disponible (datos solo en memoria)'
       } · fotografías en ${esc(Fotos.modo)}.</p>
@@ -2249,6 +2251,7 @@ function renderConfig() {
         <button type="button" class="btn btn--primary" data-accion="exportar-json"><span aria-hidden="true">📤</span>Exportar todos los datos (JSON)</button>
         <button type="button" class="btn" data-accion="importar-json"><span aria-hidden="true">📥</span>Importar datos desde JSON</button>
         <button type="button" class="btn" data-accion="exportar-resumen"><span aria-hidden="true">🧾</span>Exportar resumen</button>
+        <button type="button" class="btn" data-accion="buscar-actualizacion"><span aria-hidden="true">⬇️</span>Buscar una versión nueva</button>
         <button type="button" class="btn btn--danger" data-accion="borrar-todo"><span aria-hidden="true">🗑️</span>Borrar todos los datos</button>
       </div>
     </section>
@@ -2457,7 +2460,9 @@ function descargar(nombre, contenido, mime) {
 function exportarJSON() {
   const datos = {
     aplicacion: 'Mi Plan de Dieta',
-    version: 1,
+    version: 1, // versión del formato del archivo, no del programa
+    versionPrograma: VERSION,
+    versionCreada: VERSION_FECHA,
     exportadoEn: new Date().toISOString(),
     settings: state.settings,
     mealLogs: state.mealLogs,
@@ -2480,6 +2485,8 @@ function exportarResumen() {
   const lineas = [
     'Mi Plan de Dieta — resumen del programa',
     '=======================================',
+    `Versión del programa: ${VERSION_TEXTO}`,
+    '',
     `Inicio: ${D.corto(p.inicio)}`,
     `Fin: ${D.corto(p.fin)}`,
     `Estado: ${p.etiquetaEstado}`,
@@ -2499,6 +2506,24 @@ function exportarResumen() {
   if (descargar(`resumen-mi-plan-dieta-${D.iso(D.hoy())}.txt`, lineas.join('\n'), 'text/plain')) {
     toast('Datos exportados');
   }
+}
+
+/**
+ * Vuelve a pedir los archivos del programa al servidor saltando la caché del
+ * navegador y recarga la página. Es la forma de que un dispositivo que sigue
+ * mostrando una versión antigua pase a la última sin borrar datos.
+ */
+async function buscarActualizacion() {
+  toast('Buscando una versión nueva…');
+  const archivos = ['index.html', 'app.js', 'nube.js', 'styles.css'];
+  for (let i = 0; i < archivos.length; i += 1) {
+    try {
+      await fetch(`${archivos[i]}?v=${Date.now()}`, { cache: 'reload' });
+    } catch (e) {
+      /* sin conexión: se recarga igualmente con lo que haya */
+    }
+  }
+  window.location.reload();
 }
 
 let inputImport = null;
@@ -3303,6 +3328,9 @@ function manejarClick(ev) {
     case 'nube-borrar-remoto':
       borrarDatosNube();
       return;
+    case 'buscar-actualizacion':
+      buscarActualizacion();
+      return;
     case 'exportar-json':
       exportarJSON();
       return;
@@ -3456,7 +3484,7 @@ function pintarSesionHoy() {
     : Nube.disponible()
       ? '🔒 Sin sesión: los datos se guardan solo en este dispositivo'
       : '📴 Modo local: los datos se guardan solo en este dispositivo';
-  linea.textContent = `${cuenta} · 🏷️ Versión ${VERSION_TEXTO}`;
+  linea.textContent = `${cuenta} · ${VERSION_ETIQUETA}`;
 }
 
 /**
@@ -3705,7 +3733,8 @@ function abrirCuenta() {
     cuerpo: `<p>Sesión iniciada como <strong>${esc(Nube.correo())}</strong>.</p>
       <p>Estado de la sincronización: <strong>${esc(info.icono)} ${esc(info.texto)}</strong></p>
       <p class="hint">Los datos se guardan primero en este dispositivo y se copian a la nube en segundo plano, de
-      modo que puedes seguir registrando comidas sin conexión.</p>`,
+      modo que puedes seguir registrando comidas sin conexión.</p>
+      <p class="hint">${esc(VERSION_ETIQUETA)}</p>`,
     acciones: [
       {
         texto: '🔄 Sincronizar ahora',
@@ -4150,6 +4179,12 @@ const Bloqueo = {
   permitidoAhora: false,
 };
 
+/** Escribe la versión en la pantalla de acceso, leyendo la única constante. */
+function pintarVersionAcceso() {
+  const el = $('#acceso-version');
+  if (el) el.textContent = VERSION_ETIQUETA;
+}
+
 /** Aplica o retira la pantalla de acceso según la sesión y la preferencia. */
 function aplicarBloqueo(comprobando) {
   const pantalla = $('#pantalla-acceso');
@@ -4167,12 +4202,15 @@ function aplicarBloqueo(comprobando) {
     pantalla.hidden = false;
     document.body.classList.add('bloqueado');
     sub.textContent = 'Comprobando la sesión…';
+    pintarVersionAcceso();
     form.hidden = true;
     enlaces.hidden = true;
     nota.hidden = true;
     botonSinConexion.hidden = true;
     return;
   }
+
+  pintarVersionAcceso();
 
   const debeBloquear =
     Bloqueo.activo() && Nube.disponible() && !Nube.conectado() && !Bloqueo.permitidoAhora;
@@ -4255,7 +4293,8 @@ function primerArranque() {
       <div class="field"><label for="inicio-prog">Fecha de inicio del programa</label>
         <input type="date" id="inicio-prog" value="${hoyISO}" /></div>
       <p class="hint">Podrás cambiar las fechas más adelante en Configuración. También se creará una propuesta de
-      excepción navideña (24 de diciembre – 1 de enero) que permanecerá desactivada hasta que tú la actives.</p>`,
+      excepción navideña (24 de diciembre – 1 de enero) que permanecerá desactivada hasta que tú la actives.</p>
+      <p class="hint">${esc(VERSION_ETIQUETA)}</p>`,
     acciones: [
       {
         texto: 'Empezar el programa',
