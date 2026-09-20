@@ -293,8 +293,11 @@ if (!window.Nube) {
     aplicandoRemoto: false,
     estado: 'sin-biblioteca',
     detalle: 'No se ha cargado el módulo de nube.',
+    confirmada: false,
+    pendiente: false,
     disponible: () => false,
     conectado: () => false,
+    listaParaEscribir: () => false,
     correo: () => '',
     init: () => Promise.resolve(false),
     alCambiar: () => {},
@@ -3488,12 +3491,25 @@ function iniciarNube() {
       pintarCuenta();
       aplicarBloqueo(false);
       if (!listo) return;
-      if (Nube.conectado()) sincronizacionInicial();
+      /* Primero se registra el observador y solo después se mira si ya había
+         sesión, para no perder ningún evento intermedio. */
       Nube.alCambiar((evento) => {
         pintarCuenta();
         aplicarBloqueo(false);
-        if (evento === 'PASSWORD_RECOVERY') formularioNuevaContrasena();
-        if (evento === 'SIGNED_OUT') render();
+        if (evento === 'PASSWORD_RECOVERY') {
+          formularioNuevaContrasena();
+          return;
+        }
+        if (evento === 'SIGNED_OUT') {
+          render();
+          return;
+        }
+        /* Patrón recomendado: cargar los datos únicamente cuando la sesión está
+           confirmada. Antes de eso `auth.uid()` no existe y RLS devolvería cero
+           filas, que es lo que producía la pantalla vacía. */
+        if (EVENTOS_CON_SESION.indexOf(evento) !== -1 && Nube.conectado()) {
+          sincronizacionInicial();
+        }
       });
       if (Nube.conectado()) sincronizacionInicial();
     })
@@ -3520,6 +3536,9 @@ function hayDatosLocales() {
 /** Evita que dos sincronizaciones iniciales se solapen. */
 let sincronizando = false;
 
+/** Eventos de Supabase que llegan con una sesión válida y permiten leer datos. */
+const EVENTOS_CON_SESION = ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'];
+
 /** Rechaza si la promesa tarda más de `ms` para no dejar la interfaz colgada. */
 function conLimite(promesa, ms, mensaje) {
   return Promise.race([
@@ -3541,6 +3560,14 @@ async function sincronizacionInicial(reintento) {
       'el servidor ha tardado demasiado en responder'
     );
     if (!remoto || !remoto.datos || !Object.keys(remoto.datos).length) {
+      /* El servidor no tiene nada guardado para este usuario. Solo se sube si
+         este dispositivo tiene datos reales: así un arranque en blanco jamás
+         sustituye una copia remota por un estado vacío. */
+      if (!hayDatosLocales()) {
+        Nube.estado = 'sincronizado';
+        pintarCuenta();
+        return;
+      }
       await subirTodoALaNube();
       toast('Datos subidos a la nube');
       return;
@@ -3573,6 +3600,9 @@ async function sincronizacionInicial(reintento) {
   } finally {
     sincronizando = false;
     quizasPrimerArranque();
+    /* Si hubo cambios locales bloqueados mientras se comprobaba el servidor,
+       ahora ya se pueden enviar. */
+    if (Nube.pendiente && Nube.listaParaEscribir()) Nube.subirAhora();
   }
 }
 
@@ -3629,6 +3659,8 @@ async function recuperarFotosDeLaNube() {
 /** Sube el estado y las fotografías que falten en la nube. */
 async function subirTodoALaNube() {
   if (!Nube.conectado()) return false;
+  /* Antes de escribir hay que haber leído al menos una vez la fila del usuario. */
+  if (!Nube.confirmada) await Nube.descargar();
   await Nube.subir(state);
   pintarCuenta();
   try {

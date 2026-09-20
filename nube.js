@@ -31,6 +31,11 @@ const Nube = {
   pendiente: false,
   suscriptores: [],
   aplicandoRemoto: false,
+  /* Cerrojo de seguridad: mientras no se haya leído con éxito la fila del
+     usuario en el servidor no se permite ninguna escritura. Así una lectura
+     fallida o prematura (sesión aún no resuelta, RLS, red lenta) nunca puede
+     sobrescribir la copia de la nube con un estado vacío. */
+  confirmada: false,
 
   /* --- Ciclo de vida --- */
 
@@ -74,6 +79,9 @@ const Nube = {
       this.fijarSesion(null);
     }
 
+    /* La sesión puede restaurarse o renovarse después de este arranque (token en
+       la URL, refresco, otra pestaña). Cualquier evento con sesión se reenvía a
+       la aplicación para que cargue los datos solo cuando `auth.uid()` existe. */
     this.cliente.auth.onAuthStateChange((evento, sesion) => {
       this.fijarSesion(sesion);
       /* La librería mantiene un cerrojo mientras ejecuta este callback: si desde
@@ -92,9 +100,21 @@ const Nube = {
     return true;
   },
 
+  /** ¿Se ha comprobado ya qué hay guardado en el servidor para este usuario? */
+  listaParaEscribir() {
+    return this.conectado() && this.confirmada;
+  },
+
   fijarSesion(sesion) {
+    const anterior = this.usuario ? this.usuario.id : '';
     this.sesion = sesion || null;
     this.usuario = sesion && sesion.user ? sesion.user : null;
+    /* Si cambia (o desaparece) el usuario, lo que sabíamos del servidor ya no
+       sirve: vuelve a hacer falta una lectura antes de escribir. */
+    if ((this.usuario ? this.usuario.id : '') !== anterior) {
+      this.confirmada = false;
+      this.revision = 0;
+    }
     if (!this.usuario) {
       this.estado = 'desconectado';
       this.detalle = '';
@@ -201,7 +221,13 @@ const Nube = {
       .eq('usuario_id', this.usuario.id)
       .maybeSingle();
     if (error) throw new Error(this.traducirError(error));
-    if (!data) return null;
+    /* Lectura correcta: a partir de aquí ya se sabe qué hay en el servidor y se
+       pueden autorizar las escrituras. */
+    this.confirmada = true;
+    if (!data) {
+      this.revision = 0;
+      return null;
+    }
     this.revision = data.revision || 0;
     return { datos: data.datos, revision: data.revision, actualizadoEn: data.actualizado_en };
   },
@@ -209,6 +235,14 @@ const Nube = {
   /** Escribe el estado completo en la nube. */
   async subir(datos) {
     if (!this.conectado()) return false;
+    if (!this.confirmada) {
+      /* Nunca se escribe a ciegas: primero se comprueba el estado del servidor. */
+      this.pendiente = true;
+      this.estado = 'pendiente';
+      this.detalle = 'Esperando a comprobar los datos del servidor';
+      this.avisar('SYNC');
+      throw new Error('todavía no se han comprobado los datos del servidor');
+    }
     this.estado = 'sincronizando';
     this.avisar('SYNC');
     const fila = {
@@ -238,7 +272,7 @@ const Nube = {
 
   /** Programa una subida agrupando cambios seguidos. */
   programarSubida(obtenerDatos) {
-    if (!this.conectado() || this.aplicandoRemoto) return;
+    if (!this.listaParaEscribir() || this.aplicandoRemoto) return;
     this.obtenerDatos = obtenerDatos || this.obtenerDatos;
     this.pendiente = true;
     this.estado = 'pendiente';
@@ -252,7 +286,7 @@ const Nube = {
       window.clearTimeout(this.temporizador);
       this.temporizador = null;
     }
-    if (!this.conectado() || typeof this.obtenerDatos !== 'function') return false;
+    if (!this.listaParaEscribir() || typeof this.obtenerDatos !== 'function') return false;
     try {
       await this.subir(this.obtenerDatos());
       return true;
