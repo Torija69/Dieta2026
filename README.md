@@ -12,7 +12,8 @@ guarda en el propio dispositivo y, si inicias sesión, puede sincronizarse con t
 
 Versión aprobada para publicar en el origen existente de GitHub Pages. Diseño Torija v1.0.0 con fuentes locales, cabecera carbón, superficies cálidas y acento lima. Se conservan el modo oscuro existente y los colores funcionales de los estados.
 
-El motor solo cambia `VERSION` y `VERSION_FECHA`; `nube.js`, `supabase.sql`, las claves de datos y las preferencias de producción no cambian. No se han consultado ni modificado datos reales de Supabase.
+El motor conserva la lógica del programa salvo los metadatos `VERSION` y `VERSION_FECHA` y la corrección de seguridad de la importación; `nube.js`, `supabase.sql`, las claves de datos y las preferencias de producción no cambian. No se han consultado ni modificado datos reales de Supabase.
+La importación de copias JSON ahora valida fechas, identificadores, estructura y fotos antes de tocar los datos; rechaza archivos manipulados sin cambiar la copia guardada. Las copias propias válidas de v1.4.2 siguen siendo compatibles.
 
 ```sh
 python3 -m unittest discover -s tests -v

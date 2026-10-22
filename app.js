@@ -45,6 +45,106 @@ function esc(value) {
     .replace(/'/g, '&#39;');
 }
 
+/* SEGURIDAD_IMPORTACION_INICIO */
+/** Solo imágenes raster incrustadas; nunca HTML, SVG, eventos o URL remotas. */
+function esFotoSegura(valor) {
+  if (typeof valor !== 'string') return false;
+  const partes = /^data:image\/(?:jpeg|png|webp|gif|avif|bmp);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(valor);
+  return !!partes && partes[1].length % 4 === 0;
+}
+
+/** Valida la copia completa antes de cambiar estado, fotos o copia de seguridad. */
+function validarCopiaImportada(datos) {
+  const objeto = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const texto = (v) => typeof v === 'string';
+  const identificador = (v) => texto(v) && /^[A-Za-z0-9_.:-]{1,160}$/.test(v);
+  const fecha = (v) => {
+    if (!texto(v) || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const d = D.parse(v);
+    return Number.isFinite(d.getTime()) && D.iso(d) === v;
+  };
+  const opcional = (o, k, prueba) => o[k] == null || prueba(o[k]);
+  const numero = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0;
+  const booleano = (v) => typeof v === 'boolean';
+  const sinClavesPeligrosas = (v, nivel = 0) => {
+    if (nivel > 32) return false;
+    if (v === null || typeof v !== 'object') return ['string', 'number', 'boolean', 'undefined'].includes(typeof v) || v === null;
+    return Object.keys(v).every((k) => !['__proto__', 'prototype', 'constructor'].includes(k)
+      && sinClavesPeligrosas(v[k], nivel + 1));
+  };
+  if (!objeto(datos) || !sinClavesPeligrosas(datos) || !objeto(datos.settings)) return false;
+  if (datos.version != null && datos.version !== 1) return false;
+  const s = datos.settings;
+  if (!fecha(s.fechaInicioPrograma) || !opcional(s, 'fechaFinPrograma', fecha)) return false;
+  if (s.fechaFinPrograma && s.fechaFinPrograma < s.fechaInicioPrograma) return false;
+  if (!opcional(s, 'tema', (v) => ['auto', 'light', 'dark'].includes(v))
+    || !opcional(s, 'desayunoComun', texto) || !opcional(s, 'formatoFecha', texto)) return false;
+  for (const k of ['permitirRegistrosFuturos', 'mostrarFotosResumen']) {
+    if (!opcional(s, k, booleano)) return false;
+  }
+  if (!opcional(s, 'consejoHambre', (v) => Array.isArray(v) && v.every(texto))) return false;
+  for (const k of ['menuSemana1', 'menuSemana2']) {
+    if (!opcional(s, k, (v) => Array.isArray(v) && v.length === 7
+      && v.every((d) => objeto(d) && texto(d.comida) && texto(d.cena)))) return false;
+  }
+  if (datos.mealLogs != null) {
+    if (!objeto(datos.mealLogs)) return false;
+    for (const [clave, log] of Object.entries(datos.mealLogs)) {
+      const coincidencia = /^(\d{4}-\d{2}-\d{2})-(desayuno|comida|cena)$/.exec(clave);
+      if (!coincidencia || !fecha(coincidencia[1]) || !objeto(log)) return false;
+      if (log.fecha !== coincidencia[1]
+        || log.tipoDeComida !== coincidencia[2]
+        || !opcional(log, 'estado', (v) => texto(v) && Object.hasOwn(ESTADOS, v))
+        || !opcional(log, 'comentario', texto)
+        || !opcional(log, 'fotografia', identificador)
+        || !opcional(log, 'fechaDeActualizacion', texto)) return false;
+    }
+  }
+  if (datos.shoppingLists != null) {
+    if (!objeto(datos.shoppingLists)) return false;
+    for (const [clave, lista] of Object.entries(datos.shoppingLists)) {
+      if (!fecha(clave) || !objeto(lista) || !Array.isArray(lista.productos)) return false;
+      if (!opcional(lista, 'semanaId', fecha)) return false;
+      if (lista.rango != null && (!objeto(lista.rango)
+        || !fecha(lista.rango.inicio) || !fecha(lista.rango.fin))) return false;
+      const ids = new Set();
+      for (const p of lista.productos) {
+        if (!objeto(p) || !identificador(p.id) || ids.has(p.id) || !texto(p.nombre)) return false;
+        ids.add(p.id);
+        for (const k of ['categoria', 'unidad', 'nota']) if (!opcional(p, k, texto)) return false;
+        if (!opcional(p, 'cantidad', (v) => texto(v) || numero(v))
+          || !opcional(p, 'comprado', booleano)) return false;
+      }
+    }
+  }
+  if (datos.exceptions != null) {
+    if (!Array.isArray(datos.exceptions)) return false;
+    const ids = new Set();
+    for (const e of datos.exceptions) {
+      if (!objeto(e) || !identificador(e.id) || ids.has(e.id) || !texto(e.nombre)
+        || !fecha(e.fechaInicio) || !fecha(e.fechaFin) || e.fechaFin < e.fechaInicio
+        || !['dia', ...TIPOS_COMIDA].includes(e.tipo)
+        || !opcional(e, 'nota', texto) || !opcional(e, 'activa', booleano)
+        || !opcional(e, 'fechaCreacion', texto)) return false;
+      ids.add(e.id);
+    }
+  }
+  if (datos.programHistory != null) {
+    if (!Array.isArray(datos.programHistory)) return false;
+    for (const h of datos.programHistory) {
+      if (!objeto(h) || !fecha(h.fechaInicioPrograma) || !fecha(h.fechaFinPrograma)
+        || !opcional(h, 'archivadoEn', texto)) return false;
+      for (const k of ['comidasCumplidas', 'comidasNoCumplidas', 'adherencia']) {
+        if (!opcional(h, k, numero)) return false;
+      }
+    }
+  }
+  if (datos.fotos != null && (!objeto(datos.fotos)
+    || !Object.entries(datos.fotos).every(([k, v]) => identificador(k) && esFotoSegura(v)))) return false;
+  return true;
+}
+/* SEGURIDAD_IMPORTACION_FIN */
+
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
 }
@@ -419,7 +519,8 @@ const Fotos = {
     });
   },
   obtener(clave) {
-    return this.cache.get(clave) || null;
+    const url = this.cache.get(clave);
+    return esFotoSegura(url) ? url : null;
   },
   volcarLocal() {
     const obj = {};
@@ -429,6 +530,9 @@ const Fotos = {
     return Store.set(`${CLAVE_DATOS}.fotos`, JSON.stringify(obj));
   },
   async guardar(clave, dataUrl) {
+/* SEGURIDAD_IMPORTACION_INICIO */
+    if (!esFotoSegura(dataUrl)) return false;
+/* SEGURIDAD_IMPORTACION_FIN */
     this.cache.set(clave, dataUrl);
     if (this.modo === 'indexeddb' && this.db) {
       try {
@@ -1146,7 +1250,7 @@ function tarjetaComida(fechaISO, tipo, plato) {
                 ? `<div class="meal-photo">
                     <button type="button" class="thumb" data-accion="ver-foto" data-clave="${esc(fotoClave)}"
                       data-alt="${esc(altFoto)}" aria-label="Ampliar ${esc(altFoto)}">
-                      <img src="${fotoUrl}" alt="${esc(altFoto)}" />
+                      <img src="${esc(fotoUrl)}" alt="${esc(altFoto)}" />
                     </button>
                     <button type="button" class="btn btn--sm btn--ghost" data-accion="borrar-foto"
                       data-fecha="${fechaISO}" data-tipo="${tipo}">Eliminar foto</button>
@@ -1522,7 +1626,7 @@ function renderControl() {
             fotoUrl && state.settings.mostrarFotosResumen
               ? `<button type="button" class="thumb" data-accion="ver-foto" data-clave="${esc(
                   log.fotografia
-                )}" data-alt="${esc(alt)}" aria-label="Ampliar ${esc(alt)}"><img src="${fotoUrl}" alt="${esc(
+                )}" data-alt="${esc(alt)}" aria-label="Ampliar ${esc(alt)}"><img src="${esc(fotoUrl)}" alt="${esc(
                   alt
                 )}" /></button>`
               : ''
@@ -1709,25 +1813,25 @@ function renderCompra() {
         .filter((p) => p.categoria === cat)
         .map(
           (p) => `<div class="item ${p.comprado ? 'item--bought' : ''}">
-            <input type="checkbox" id="chk-${p.id}" data-accion="prod-comprado" data-id="${p.id}" ${
+            <input type="checkbox" id="chk-${esc(p.id)}" data-accion="prod-comprado" data-id="${esc(p.id)}" ${
               p.comprado ? 'checked' : ''
             } aria-label="Marcar ${esc(p.nombre)} como comprado" ${p.comprado ? '' : ''} />
             <div class="item-main">
-              <label class="item-name" for="chk-${p.id}">${esc(p.nombre)}</label>
+              <label class="item-name" for="chk-${esc(p.id)}">${esc(p.nombre)}</label>
               ${p.nota ? `<span class="item-note">${esc(p.nota)}</span>` : ''}
               <div class="item-qty">
-                <label class="visually-hidden" for="qty-${p.id}">Cantidad de ${esc(p.nombre)}</label>
-                <input class="qty" id="qty-${p.id}" type="text" inputmode="decimal" placeholder="Cantidad"
-                  value="${esc(p.cantidad)}" data-accion="prod-campo" data-campo="cantidad" data-id="${p.id}" />
-                <label class="visually-hidden" for="unit-${p.id}">Unidad de ${esc(p.nombre)}</label>
-                <input class="unit" id="unit-${p.id}" type="text" placeholder="Unidad"
-                  value="${esc(p.unidad)}" data-accion="prod-campo" data-campo="unidad" data-id="${p.id}" />
+                <label class="visually-hidden" for="qty-${esc(p.id)}">Cantidad de ${esc(p.nombre)}</label>
+                <input class="qty" id="qty-${esc(p.id)}" type="text" inputmode="decimal" placeholder="Cantidad"
+                  value="${esc(p.cantidad)}" data-accion="prod-campo" data-campo="cantidad" data-id="${esc(p.id)}" />
+                <label class="visually-hidden" for="unit-${esc(p.id)}">Unidad de ${esc(p.nombre)}</label>
+                <input class="unit" id="unit-${esc(p.id)}" type="text" placeholder="Unidad"
+                  value="${esc(p.unidad)}" data-accion="prod-campo" data-campo="unidad" data-id="${esc(p.id)}" />
               </div>
             </div>
             <div class="item-tools no-print">
-              <button type="button" class="btn btn--sm btn--ghost" data-accion="prod-editar" data-id="${p.id}"
+              <button type="button" class="btn btn--sm btn--ghost" data-accion="prod-editar" data-id="${esc(p.id)}"
                 aria-label="Editar ${esc(p.nombre)}"><span aria-hidden="true">✏️</span></button>
-              <button type="button" class="btn btn--sm btn--ghost" data-accion="prod-borrar" data-id="${p.id}"
+              <button type="button" class="btn btn--sm btn--ghost" data-accion="prod-borrar" data-id="${esc(p.id)}"
                 aria-label="Eliminar ${esc(p.nombre)}"><span aria-hidden="true">🗑️</span></button>
             </div>
           </div>`
@@ -1961,7 +2065,7 @@ function renderProgreso() {
           url
             ? `<button type="button" class="thumb" data-accion="ver-foto" data-clave="${esc(
                 l.fotografia
-              )}" data-alt="${esc(alt)}" aria-label="Ampliar ${esc(alt)}"><img src="${url}" alt="${esc(
+              )}" data-alt="${esc(alt)}" aria-label="Ampliar ${esc(alt)}"><img src="${esc(url)}" alt="${esc(
                 alt
               )}" /></button>`
             : '<div class="empty" style="padding:var(--space-4)">Solo comentario</div>'
@@ -2056,7 +2160,7 @@ function renderProgreso() {
               .map(
                 (h) =>
                   `<p>${esc(D.corto(h.fechaInicioPrograma))} – ${esc(D.corto(h.fechaFinPrograma))} · ${
-                    h.comidasCumplidas != null ? `${h.comidasCumplidas} comidas cumplidas` : 'sin resumen'
+                    h.comidasCumplidas != null ? `${esc(h.comidasCumplidas)} comidas cumplidas` : 'sin resumen'
                   } · archivado el ${esc(D.horaFecha(h.archivadoEn))}</p>`
               )
               .join('')}
@@ -2090,15 +2194,15 @@ function renderExcepciones() {
         ${e.nota ? `<p class="hint">${esc(e.nota)}</p>` : ''}
         <p class="hint">Creada el ${esc(D.horaFecha(e.fechaCreacion))}</p>
         <div class="row">
-          <button type="button" class="btn btn--sm" data-accion="exc-toggle" data-id="${e.id}">
+          <button type="button" class="btn btn--sm" data-accion="exc-toggle" data-id="${esc(e.id)}">
             <span aria-hidden="true">${e.activa ? '⏸️' : '▶️'}</span>${e.activa ? 'Desactivar' : 'Activar'}</button>
-          <button type="button" class="btn btn--sm" data-accion="exc-editar" data-id="${e.id}">
+          <button type="button" class="btn btn--sm" data-accion="exc-editar" data-id="${esc(e.id)}">
             <span aria-hidden="true">✏️</span>Editar</button>
-          <button type="button" class="btn btn--sm" data-accion="exc-duplicar" data-id="${e.id}">
+          <button type="button" class="btn btn--sm" data-accion="exc-duplicar" data-id="${esc(e.id)}">
             <span aria-hidden="true">📑</span>Duplicar para otro año</button>
-          <button type="button" class="btn btn--sm" data-accion="exc-dias" data-id="${e.id}">
+          <button type="button" class="btn btn--sm" data-accion="exc-dias" data-id="${esc(e.id)}">
             <span aria-hidden="true">📅</span>Ver días afectados</button>
-          <button type="button" class="btn btn--sm btn--danger" data-accion="exc-borrar" data-id="${e.id}">
+          <button type="button" class="btn btn--sm btn--danger" data-accion="exc-borrar" data-id="${esc(e.id)}">
             <span aria-hidden="true">🗑️</span>Eliminar</button>
         </div>
       </article>`;
@@ -2432,7 +2536,7 @@ function verFoto(clave, alt) {
   abrirModal({
     titulo: 'Fotografía del plato',
     ancho: true,
-    cuerpo: `<img class="full" src="${url}" alt="${esc(alt || 'Fotografía del plato')}" />
+    cuerpo: `<img class="full" src="${esc(url)}" alt="${esc(alt || 'Fotografía del plato')}" />
       <p class="hint">${esc(alt || '')}</p>`,
     acciones: [{ texto: 'Cerrar', clase: 'btn--ghost', cerrar: true }],
   });
@@ -2545,6 +2649,12 @@ function importarJSON() {
           toast('El archivo no tiene una estructura válida', 'error');
           return;
         }
+/* SEGURIDAD_IMPORTACION_INICIO */
+        if (!validarCopiaImportada(datos)) {
+          toast('El archivo contiene datos o imágenes no válidos; no se ha modificado nada', 'error');
+          return;
+        }
+/* SEGURIDAD_IMPORTACION_FIN */
         const normalizado = normalizar(datos);
         if (!normalizado) {
           toast('El archivo no tiene una estructura válida', 'error');
@@ -2677,8 +2787,8 @@ function verHistorial() {
     .map(
       (h) =>
         `<li>${esc(D.corto(h.fechaInicioPrograma))} – ${esc(D.corto(h.fechaFinPrograma))} · adherencia ${
-          h.adherencia == null ? 'sin datos' : `${h.adherencia} %`
-        } · ${h.comidasCumplidas} comidas cumplidas</li>`
+          h.adherencia == null ? 'sin datos' : `${esc(h.adherencia)} %`
+        } · ${esc(h.comidasCumplidas)} comidas cumplidas</li>`
     )
     .join('');
   const actual = estadisticas(state.settings.fechaInicioPrograma, state.settings.fechaFinPrograma);

@@ -52,5 +52,6 @@ Seguir una dieta personal de seis meses basada en un menú que se repite en cicl
 - Respetar el tema oscuro ya disponible y las preferencias guardadas, aunque el sistema Torija parta del modo claro.
 - Preparar demostración local separada de producción, sin SDK, conexiones, credenciales o datos reales.
 - Demo temporal en memoria, sin APIs de persistencia, e informar que se pierde al recargar; acceso no operativo.
-- Candidata a producción con lógica intacta y solo metadatos de versión actualizados; mismo origen de GitHub Pages.
+- Candidata a producción con lógica de la dieta intacta, metadatos y corrección aislada de seguridad; mismo origen de GitHub Pages.
+- Con aprobación separada, se corrige la importación JSON preexistente: valida antes de mutar estado, copia o fotos y admite copias válidas anteriores.
 - Publicación v1.5.0 aprobada expresamente; integrar main y actualizar catálogo manteniendo el origen existente.

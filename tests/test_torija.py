@@ -12,12 +12,22 @@ class TorijaTests(unittest.TestCase):
     def setUpClass(cls):
         subprocess.run(["python3", str(ROOT / "scripts/preparar_web.py")], check=True, capture_output=True)
 
-    def test_motor_sin_cambios_salvo_version(self):
+    def test_motor_sin_cambios_fuera_de_seguridad_y_version(self):
         source = (ROOT / "app.js").read_text(encoding="utf-8")
+        source = re.sub(r"^/\* SEGURIDAD_IMPORTACION_INICIO \*/\n.*?^/\* SEGURIDAD_IMPORTACION_FIN \*/\n\n?",
+                        "", source, flags=re.M | re.S)
+        source = source.replace("    const url = this.cache.get(clave);\n    return esFotoSegura(url) ? url : null;",
+                                "    return this.cache.get(clave) || null;")
+        for field in ("p.id", "e.id", "fotoUrl", "h.comidasCumplidas", "h.adherencia"):
+            source = source.replace("${esc(" + field + ")}", "${" + field + "}")
+        source = source.replace('src="${esc(url)}"', 'src="${url}"')
         source = re.sub(r"^const VERSION = .*;$", "const VERSION = metadata;", source, count=1, flags=re.M)
         source = re.sub(r"^const VERSION_FECHA = .*;$", "const VERSION_FECHA = metadata;", source, count=1, flags=re.M)
         self.assertEqual(hashlib.sha256(source.encode()).hexdigest(),
                          "694a838cf5c5df5f3016e76a411a342d0c08d9831e81128911e3b296f600366b")
+
+    def test_validacion_importacion_y_fotos(self):
+        subprocess.run(["node", str(ROOT / "tests/seguridad_importacion.cjs")], check=True)
 
     def test_nube_esquema_y_estilos_base_intactos(self):
         for name, expected in {

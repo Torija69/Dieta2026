@@ -4,7 +4,7 @@
 
 ## Integridad y privacidad
 
-- `app.js` idéntico a la base v1.4.2 al excluir únicamente VERSION y VERSION_FECHA.
+- `app.js` idéntico a la base v1.4.2 al excluir VERSION, VERSION_FECHA y la corrección de seguridad de la importación JSON aprobada después del piloto.
 - `nube.js`, `supabase.sql` y `styles.css` originales idénticos por SHA-256.
 - No se han consultado cuentas, filas ni fotos reales de Supabase, ni modificado su configuración.
 - Candidata en `dist/public/` conserva los archivos de producción y sus claves de datos.
@@ -13,6 +13,9 @@
 - Probada con getters de localStorage, sessionStorage e IndexedDB que lanzan errores: cero intentos de acceso.
 - Guardado durante la visita, cambio de vistas y JSON exportado/importado funcionan en memoria; recargar elimina los cambios, como indica el aviso.
 - En la candidata de producción, comentario y foto sintéticos sí persisten tras recargar, con el SDK bloqueado durante QA.
+- La vulnerabilidad preexistente se reprodujo en la v1.4.2 pública usando solo un perfil de prueba aislado: un ID de excepción de JSON manipulado ejecutaba un evento HTML al abrir Excepciones. No se utilizaron datos reales.
+- La candidata corrigió el flujo: 20 casos maliciosos en pruebas automáticas y seis importaciones maliciosas reales en navegador, sin ejecutar código ni modificar estado, copia de seguridad o fotos.
+- Una copia JSON exportada por v1.4.2 con comentario y foto sintéticos se importó íntegra y persistió tras recargar en la candidata v1.5.0.
 - Siete pruebas automatizadas de integridad, aislamiento, fuentes y paquetes sin documentación interna.
 
 ## Pruebas locales
