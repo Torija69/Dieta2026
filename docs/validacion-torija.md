@@ -9,15 +9,16 @@
 - No se han consultado cuentas, filas ni fotos reales de Supabase, ni modificado su configuración.
 - Candidata en `dist/public/` conserva los archivos de producción y sus claves de datos.
 - Demo en `dist/preview/`: sin SDK, configuración remota real o conexiones; CSP `connect-src 'none'`.
-- Demo con cuatro espacios propios: datos, copia de importación, bloqueo e IndexedDB/fotos.
-- Canarios sintéticos en las claves originales de datos y copia permanecen intactos tras guardar e importar.
-- Solo se crea la base IndexedDB de la demo; no se accede a la base de fotos de producción.
+- Demo final con adaptadores de memoria para datos, fotos y bloqueo: no ejecuta APIs de persistencia.
+- Probada con getters de localStorage, sessionStorage e IndexedDB que lanzan errores: cero intentos de acceso.
+- Guardado durante la visita, cambio de vistas y JSON exportado/importado funcionan en memoria; recargar elimina los cambios, como indica el aviso.
+- En la candidata de producción, comentario y foto sintéticos sí persisten tras recargar, con el SDK bloqueado durante QA.
 - Siete pruebas automatizadas de integridad, aislamiento, fuentes y paquetes sin documentación interna.
 
 ## Pruebas locales
 
 - Hoy: tres comidas; cumplida/no cumplida/no aplica; cálculo del 50 % excluyendo no aplica.
-- Comentario y foto sintéticos guardados, ampliación de foto y persistencia tras recarga.
+- Comentario y foto sintéticos guardados y ampliación de foto. Persistencia tras recarga en la candidata; memoria temporal y reinicio al recargar en la demo final.
 - Día completo, vuelta a pendiente y excepciones respetan la lógica original, incluido el registro explícito durante una excepción.
 - Semana: siete días, navegación, selector de fecha y apertura del día con tres comidas.
 - Control: cuadrícula, navegación semanal y estadísticas.
@@ -27,7 +28,7 @@
 - Excepciones: nombre obligatorio, fechas inválidas, crear/editar/desactivar/duplicar/ver días/borrar.
 - Navidad solo se activa al confirmar; comidas pendientes aparecen exentas durante una excepción.
 - Ajustes: menú editable y restauración, fechas, extensión y reinicio manteniendo el historial.
-- JSON con versión única exportado e importado, fotos conservadas, JSON inválido rechazado.
+- JSON con versión única exportado e importado, fotos conservadas, JSON inválido rechazado; repetido con el adaptador temporal final.
 - Resumen exportado; confirmación de borrar datos abierta y cancelada.
 - Temas claro, oscuro y automático, además del botón de alternar.
 - Cuenta en modo local y cierre de diálogos con Escape.
@@ -41,6 +42,6 @@
 
 No se prueba la sincronización real ni un inicio de sesión válido porque requeriría acceder a datos de salud. La lógica y configuración de nube no se modifican y están protegidas por las pruebas de integridad.
 
-El acceso ilustrativo de la demo no acepta credenciales. La función de actualización de recursos de la aplicación real no es una actualización remota operativa en esta demostración sin conexiones.
+El acceso ilustrativo de la demo no acepta credenciales. La función de actualización de recursos de la aplicación real no es una actualización remota operativa en esta demostración sin conexiones. La restricción de persistencia del alojamiento solo afecta a la demostración, no a los archivos de producción.
 
 Rama `feat/diseno-torija-v1.5.0`, sin integrar main ni cambiar GitHub Pages o catálogo. La publicación definitiva debe conservar https://torija69.github.io/Dieta2026/ como origen. Tras desplegar, comprobar la demo alojada, su persistencia local y que no solicite Supabase.

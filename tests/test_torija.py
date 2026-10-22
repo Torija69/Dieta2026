@@ -42,13 +42,17 @@ class TorijaTests(unittest.TestCase):
         self.assertNotIn("ymkojmxilsitilfpmfxc", cloud)
         self.assertNotIn("sb_publishable_", cloud)
 
-    def test_almacenamientos_demo_aislados(self):
+    def test_demo_memoria_sin_apis_de_persistencia(self):
         source = (ROOT / "dist/preview/app.js").read_text(encoding="utf-8")
         self.assertIn("const CLAVE_DATOS = 'Torija.Dieta.demo.v1';", source)
         self.assertIn("const CLAVE_COPIA = 'Torija.Dieta.demo.v1.copia';", source)
-        self.assertIn("window.indexedDB.open('Torija.Dieta.demo.fotos.v1', 1)", source)
         self.assertIn("const CLAVE_BLOQUEO = 'Torija.Dieta.demo.v1.bloqueo';", source)
         self.assertNotIn("miPlanDieta", source)
+        self.assertIn("memoria: Object.create(null)", source)
+        for name in ("app.js", "demo-inicio.js", "demo-acceso.js", "nube.js"):
+            script = (ROOT / "dist/preview" / name).read_text(encoding="utf-8")
+            self.assertNotRegex(script, r"\b(localStorage|sessionStorage|indexedDB)\s*[.\[]")
+            self.assertNotIn("'indexedDB' in window", script)
 
     def test_sin_documentacion_o_datos_en_salidas(self):
         for folder in ("public", "preview"):

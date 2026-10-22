@@ -40,7 +40,7 @@ def main():
 """
     demo = once(demo, "  </head>", csp + "  </head>")
     demo = once(demo, "    <!-- ============ Cabecera ============ -->", """    <aside class="demo-aviso" aria-label="Demostración aislada">
-      <div class="demo-aviso-inner"><p><strong>Vista previa Torija · Demostración local</strong>Sin Supabase ni datos reales. No introduzcas datos o fotografías personales; los cambios de prueba se guardan solo en este navegador.</p>
+      <div class="demo-aviso-inner"><p><strong>Vista previa Torija · Demostración temporal</strong>Sin Supabase ni datos reales. Los cambios de prueba se pierden al recargar. No introduzcas datos ni fotografías personales.</p>
       <a class="btn" href="acceso-demo.html">Ver diseño del acceso</a></div>
     </aside>
     <!-- ============ Cabecera ============ -->""")
@@ -50,8 +50,17 @@ def main():
     app = (ROOT / "app.js").read_text(encoding="utf-8")
     demo_app = once(app, "const CLAVE_DATOS = 'miPlanDieta.v1';", "const CLAVE_DATOS = 'Torija.Dieta.demo.v1';")
     demo_app = once(demo_app, "const CLAVE_COPIA = 'miPlanDieta.v1.copia';", "const CLAVE_COPIA = 'Torija.Dieta.demo.v1.copia';")
-    demo_app = once(demo_app, "window.indexedDB.open('miPlanDietaFotos', 1)", "window.indexedDB.open('Torija.Dieta.demo.fotos.v1', 1)")
     demo_app = once(demo_app, "const CLAVE_BLOQUEO = 'miPlanDieta.v1.bloqueo';", "const CLAVE_BLOQUEO = 'Torija.Dieta.demo.v1.bloqueo';")
+    storage_start = demo_app.index("/** Envoltorio de localStorage")
+    storage_end = demo_app.index("/* ---------------------------------------------------------\n   4. Estado")
+    memory = (ROOT / "preview/almacen-memoria.js").read_text(encoding="utf-8")
+    demo_app = demo_app[:storage_start] + memory + "\n\n" + demo_app[storage_end:]
+    lock_start = demo_app.index("const Bloqueo = {")
+    lock_end = demo_app.index("/** Escribe la versión en la pantalla de acceso", lock_start)
+    demo_app = demo_app[:lock_start] + "const Bloqueo = { activo: () => false, fijar() {}, permitidoAhora: false };\n\n" + demo_app[lock_end:]
+    demo_app = once(demo_app,
+                    "toast('El almacenamiento local está bloqueado en este contexto: los datos no se conservarán al recargar', 'error');",
+                    "toast('Demostración temporal: los cambios se pierden al recargar');")
     write(PREVIEW / "app.js", demo_app)
     cloud = (ROOT / "nube.js").read_text(encoding="utf-8")
     cloud = re.sub(r"url: 'https://[^']+\.supabase\.co'", "url: 'https://demo.invalid'", cloud, count=1)

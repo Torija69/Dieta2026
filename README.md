@@ -21,10 +21,10 @@ python3 -m http.server 8000
 ```
 
 - `dist/public/`: candidata a producción, con acceso y sincronización originales. No publicar todavía.
-- `dist/preview/`: demostración aislada. No incluye SDK, no contiene configuración real de nube y su CSP prohíbe conexiones. Utiliza claves propias de localStorage e IndexedDB, nunca datos reales.
+- `dist/preview/`: demostración aislada y temporal. No incluye SDK, configuración real de nube ni APIs de persistencia; CSP sin conexiones. Los datos y fotos de prueba viven solo en memoria y se pierden al recargar.
 - `dist/preview/acceso-demo.html`: diseño de acceso ilustrativo, con campos desactivados. No acepta credenciales.
 
-La demostración guarda solo pruebas en su propio origen. No introducir datos ni fotos personales. La publicación definitiva debe conservar el origen actual de GitHub Pages para no separar el almacenamiento local del usuario.
+La demostración solo mantiene pruebas durante la visita. No introducir datos ni fotos personales. Este límite del alojamiento no se traslada a producción: la publicación definitiva conserva localStorage, IndexedDB, Supabase y el origen actual de GitHub Pages.
 
 ---
 

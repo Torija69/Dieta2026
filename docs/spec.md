@@ -51,6 +51,6 @@ Seguir una dieta personal de seis meses basada en un menú que se repite en cicl
 - No modificar ni consultar la base de datos; mantener nube y SQL idénticos.
 - Respetar el tema oscuro ya disponible y las preferencias guardadas, aunque el sistema Torija parta del modo claro.
 - Preparar demostración local separada de producción, sin SDK, conexiones, credenciales o datos reales.
-- Usar claves propias para la demo y explicar su carácter no operativo para cuentas.
+- Demo temporal en memoria, sin APIs de persistencia, e informar que se pierde al recargar; acceso no operativo.
 - Candidata a producción con lógica intacta y solo metadatos de versión actualizados; mismo origen de GitHub Pages.
 - No publicar, integrar main ni actualizar catálogo hasta aprobación.
