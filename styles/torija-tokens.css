@@ -1,0 +1,35 @@
+/* Torija / Taller v1.0.0. Scope tokens to the application root. */
+.torija {
+  --tj-bg: #f2f1e9;
+  --tj-surface: #fbfaf5;
+  --tj-text: #292c23;
+  --tj-muted: #60634f;
+  --tj-accent: #d1dc76;
+  --tj-soft: #e9ecda;
+  --tj-border: rgb(41 44 35 / 24%);
+  --tj-field-border: #81836f;
+  --tj-error: #9b352a;
+  --tj-success: #42602f;
+  --tj-font-body: "Satoshi", Arial, sans-serif;
+  --tj-font-display: "Cabinet Grotesk", "Satoshi", Arial, sans-serif;
+  --tj-text-xs: clamp(.75rem, .73rem + .08vw, .8rem);
+  --tj-text-sm: clamp(.875rem, .85rem + .1vw, 1rem);
+  --tj-text-base: clamp(1rem, .97rem + .1vw, 1.08rem);
+  --tj-text-lg: clamp(1.125rem, 1.04rem + .4vw, 1.4rem);
+  --tj-text-xl: clamp(1.5rem, 1.3rem + .7vw, 2.25rem);
+  --tj-text-hero: clamp(2.5rem, 1.8rem + 2.5vw, 4rem);
+  --tj-space-1: .25rem;
+  --tj-space-2: .5rem;
+  --tj-space-3: .75rem;
+  --tj-space-4: 1rem;
+  --tj-space-5: 1.25rem;
+  --tj-space-6: 1.5rem;
+  --tj-space-8: 2rem;
+  --tj-space-10: 2.5rem;
+  --tj-space-12: 3rem;
+  --tj-space-16: 4rem;
+  --tj-radius-control: .5rem;
+  --tj-radius-card: 1rem;
+  --tj-radius-pill: 999px;
+  --tj-width: 75rem;
+}

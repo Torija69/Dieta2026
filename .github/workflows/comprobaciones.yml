@@ -20,3 +20,8 @@ jobs:
           node-version: 22
       - name: Comprobar la web
         run: python3 .github/scripts/comprobar_web.py
+      - name: Verificar integridad, privacidad de la demo y paquetes web
+        run: |
+          python3 -m unittest discover -s tests -v
+          python3 .github/scripts/comprobar_web.py dist/public
+          python3 .github/scripts/comprobar_web.py dist/preview

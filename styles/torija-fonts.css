@@ -1,0 +1,7 @@
+/* Local copies used by the Torija design reference. Retain typeface rights. */
+@font-face { font-family:"Satoshi"; src:url("./fonts/satoshi-1.woff2") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family:"Satoshi"; src:url("./fonts/satoshi-2.woff2") format("woff2"); font-weight:500; font-style:normal; font-display:swap; }
+@font-face { font-family:"Satoshi"; src:url("./fonts/satoshi-3.woff2") format("woff2"); font-weight:700; font-style:normal; font-display:swap; }
+@font-face { font-family:"Cabinet Grotesk"; src:url("./fonts/cabinet-grotesk-1.woff2") format("woff2"); font-weight:500; font-style:normal; font-display:swap; }
+@font-face { font-family:"Cabinet Grotesk"; src:url("./fonts/cabinet-grotesk-2.woff2") format("woff2"); font-weight:700; font-style:normal; font-display:swap; }
+@font-face { font-family:"Cabinet Grotesk"; src:url("./fonts/cabinet-grotesk-3.woff2") format("woff2"); font-weight:800; font-style:normal; font-display:swap; }

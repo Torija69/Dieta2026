@@ -3,10 +3,28 @@
 **Seguimiento personal de dieta, comidas y compra semanal**
 
 Aplicación web para gestionar una dieta personal de seis meses basada en un menú que se
-repite en ciclos de dos semanas. Funciona íntegramente en el navegador: no hay servidor,
-no hay cuentas de usuario y no se envía ningún dato a Internet. Todo lo que registras
+repite en ciclos de dos semanas. Funciona en el navegador, con almacenamiento local
+y cuenta opcional en Supabase para sincronizar entre dispositivos. Todo lo que registras
 (estados de las comidas, comentarios, fotografías, listas de la compra y excepciones) se
-guarda en el propio dispositivo.
+guarda en el propio dispositivo y, si inicias sesión, puede sincronizarse con tu cuenta.
+
+## Piloto Torija v1.5.0
+
+Vista previa pendiente de aprobación; la web publicada continúa en v1.4.2. Diseño Torija v1.0.0 con fuentes locales, cabecera carbón, superficies cálidas y acento lima. Se conservan el modo oscuro existente y los colores funcionales de los estados.
+
+El motor solo cambia `VERSION` y `VERSION_FECHA`; `nube.js`, `supabase.sql`, las claves de datos y las preferencias de producción no cambian. No se han consultado ni modificado datos reales de Supabase.
+
+```sh
+python3 -m unittest discover -s tests -v
+python3 scripts/preparar_web.py
+python3 -m http.server 8000
+```
+
+- `dist/public/`: candidata a producción, con acceso y sincronización originales. No publicar todavía.
+- `dist/preview/`: demostración aislada. No incluye SDK, no contiene configuración real de nube y su CSP prohíbe conexiones. Utiliza claves propias de localStorage e IndexedDB, nunca datos reales.
+- `dist/preview/acceso-demo.html`: diseño de acceso ilustrativo, con campos desactivados. No acepta credenciales.
+
+La demostración guarda solo pruebas en su propio origen. No introducir datos ni fotos personales. La publicación definitiva debe conservar el origen actual de GitHub Pages para no separar el almacenamiento local del usuario.
 
 ---
 
@@ -24,9 +42,9 @@ añadir a la pantalla de inicio del móvil como un acceso directo.
    hoy como inicio del programa. Puedes cambiarla y confirmar.
 
 No hace falta instalar nada, ni ejecutar un servidor local, ni tener conexión a Internet.
-Si abres la aplicación por primera vez con conexión, las tipografías se descargan y quedan
-en la caché del navegador; sin conexión se usan tipografías del sistema y la aplicación
-funciona exactamente igual.
+Las tipografías se sirven desde archivos locales; no requieren Fontshare. El SDK de Supabase
+sigue siendo opcional y requiere conexión para iniciar sesión o sincronizar; el modo local
+continúa funcionando sin él.
 
 Para tenerla siempre a mano en el móvil, ábrela en el navegador y usa
 **Añadir a la pantalla de inicio**.
@@ -221,6 +239,7 @@ simple vista se sabe si el dispositivo está ejecutando la última versión.
 
 | Versión | Creada           | Cambios                                                              |
 | ------- | ---------------- | -------------------------------------------------------------------- |
+| 1.5.0 (vista previa) | 22/10/2026 19:59 | Identidad Torija v1.0.0 en las siete vistas y acceso; núcleo y nube sin cambios funcionales. Demostración separada, sin datos reales ni Supabase. |
 | 1.4.2   | 20/09/2026 14:50 | La versión es un dato único: se escribe solo en `VERSION` y `VERSION_FECHA` y de ahí se muestra en la pantalla de acceso, en Hoy, en Ajustes, en «Tu cuenta», en la bienvenida y en los archivos exportados. Nuevo botón «Buscar una versión nueva» que recarga la aplicación saltando la caché del navegador. |
 | 1.4.1   | 20/09/2026 14:35 | Los datos se cargan solo con la sesión confirmada y se bloquean las escrituras antes de comprobar el servidor, para que un arranque en blanco no pueda sustituir la copia de la nube. La versión pasa a mostrar su fecha y hora de creación. |
 | 1.4.0   | —                | Cuenta y versión visibles en la pantalla Hoy.                         |

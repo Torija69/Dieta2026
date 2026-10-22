@@ -8,19 +8,18 @@
       name="description"
       content="Aplicación local para seguir una dieta de seis meses con menú cíclico de dos semanas, control de cumplimiento, lista de la compra y excepciones."
     />
-    <meta name="theme-color" content="#eef2e6" />
+    <meta name="theme-color" content="#292c23" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234e7a5c'/%3E%3Cpath d='M16 24c0-7 3-11 8-12-1 8-4 11-8 12Zm0 0C16 17 13 13 8 12c1 8 4 11 8 12Z' fill='%23f3f6ec'/%3E%3C/svg%3E"
     />
-    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
-    <link
-      href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=zodiak@500,600&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="stylesheet" href="styles/torija-fonts.css" />
+    <link rel="stylesheet" href="styles/torija-tokens.css" />
+    <link rel="stylesheet" href="styles/torija-components.css" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles/dieta-torija.css" />
   </head>
-  <body>
+  <body class="torija" data-design-version="1.0.0">
     <a class="skip-link" href="#contenido">Saltar al contenido principal</a>
 
     <!-- ============ Pantalla de acceso (bloqueo opcional) ============ -->
@@ -32,6 +31,7 @@
           <path d="M16 25c0-7.5-3.2-11.8-8.5-12.8C8.6 20.7 11.8 24 16 25Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
           <path d="M16 25V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
         </svg>
+        <span class="torija-signature">Torija</span>
         <h2 id="acceso-titulo">Mi Plan de Dieta</h2>
         <p class="acceso-sub" id="acceso-sub">Comprobando la sesión…</p>
         <p class="hint acceso-version" id="acceso-version"></p>
@@ -106,7 +106,7 @@
           </svg>
           <div>
             <h1>Mi Plan de Dieta</h1>
-            <span class="brand-sub">Seguimiento personal de dieta, comidas y compra semanal</span>
+            <span class="brand-sub"><span class="torija-signature">Torija</span> / Seguimiento personal de dieta, comidas y compra semanal</span>
           </div>
         </div>
 

@@ -17,6 +17,10 @@ Publicada en https://torija69.github.io/Dieta2026/ ; en local, abrir `index.html
 
 - No subir datos personales ni credenciales.
 - Mantener la estructura de ficheros actual salvo decisión registrada en `docs/decisiones.md`.
+- Piloto Torija: no cambiar lógica, claves, esquema ni nube por motivos visuales.
+- No consultar ni escribir datos de salud o cuentas reales para QA; usar solo fixtures y la demo aislada.
+- Generar con `python3 scripts/preparar_web.py`: dist/public es candidata; dist/preview es demo sin nube.
+- La demo no se publica como aplicación real. Conservar GitHub Pages como origen y esperar aprobación antes de main.
 
 ## Al terminar una tarea
 
