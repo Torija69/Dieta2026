@@ -1,6 +1,6 @@
 # Validación del piloto Torija v1.5.0
 
-22 de octubre de 2026 · Sistema Torija v1.0.0 · Vista previa, sin publicar.
+22 de octubre de 2026 · Sistema Torija v1.0.0 · Vista previa privada desplegada; producción sin cambios.
 
 ## Integridad y privacidad
 
@@ -44,4 +44,6 @@ No se prueba la sincronización real ni un inicio de sesión válido porque requ
 
 El acceso ilustrativo de la demo no acepta credenciales. La función de actualización de recursos de la aplicación real no es una actualización remota operativa en esta demostración sin conexiones. La restricción de persistencia del alojamiento solo afecta a la demostración, no a los archivos de producción.
 
-Rama `feat/diseno-torija-v1.5.0`, sin integrar main ni cambiar GitHub Pages o catálogo. La publicación definitiva debe conservar https://torija69.github.io/Dieta2026/ como origen. Tras desplegar, comprobar la demo alojada, su persistencia local y que no solicite Supabase.
+Rama `feat/diseno-torija-v1.5.0`, sin integrar main ni cambiar GitHub Pages o catálogo. La publicación definitiva debe conservar https://torija69.github.io/Dieta2026/ como origen.
+
+Vista previa privada independiente creada con aprobación del usuario. En la versión alojada se han comprobado las siete vistas a 1440 y 375px sin desbordamiento global, comentarios mantenidos durante la visita, creación de una excepción, tema oscuro y acceso ilustrativo deshabilitado con enlace de vuelta. Al volver a cargar, desaparecen los cambios de prueba. Cero errores JavaScript, peticiones externas o intentos de usar las APIs de persistencia bloqueadas.
