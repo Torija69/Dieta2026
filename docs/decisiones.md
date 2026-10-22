@@ -2,6 +2,7 @@
 
 | Fecha | Decisión | Motivo | Alternativas descartadas |
 |---|---|---|---|
+| 2026-10-22 | Publicar v1.5.0 en el GitHub Pages existente tras aprobación expresa del diseño y publicación | Mantener el origen, el almacenamiento, la sesión y la sincronización de producción | Sustituir la aplicación real por la demo temporal o moverla a otro dominio |
 | 2026-10-22 | Usar adaptadores de memoria solo en la demo alojada, sin APIs de persistencia | El alojamiento de vistas previas no admite localStorage ni IndexedDB; no modificar por ello la aplicación real | Ocultar las llamadas restringidas o debilitar el almacenamiento de producción |
 | 2026-10-22 | Preparar Torija v1.0.0 como piloto visual v1.5.0 | Tercera aplicación elegida expresamente por el usuario | Migrar automáticamente otras aplicaciones |
 | 2026-10-22 | Conservar modo oscuro preexistente y colores semánticos | Respetar preferencias, estados e historial; no añadir ni eliminar funciones por una identidad visual | Suprimir el tema oscuro o recolorear todos los estados en lima |

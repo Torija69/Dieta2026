@@ -20,7 +20,7 @@ Seguir una dieta personal de seis meses basada en un menú que se repite en cicl
 - [x] Exportar e importar copias de seguridad.
 - [x] Cuenta opcional en Supabase para sincronizar entre dispositivos (Auth, RLS y fotos), con pantalla de acceso al abrir.
 - [x] Cambiar la contraseña y cerrar sesión. Las cuentas solo se crean desde el panel de Supabase.
-- [x] La versión del programa es un dato único; piloto visual v1.5.0, publicación v1.4.2.
+- [x] La versión del programa es un dato único; v1.5.0 con diseño Torija aprobado.
 - [x] Funciona sin conexión.
 
 ## Fuera de alcance
@@ -44,7 +44,7 @@ Seguir una dieta personal de seis meses basada en un menú que se repite en cicl
 - Con sesión iniciada, un cambio hecho en el móvil aparece en el ordenador tras sincronizar.
 - Sin sesión confirmada no se cargan ni escriben datos en la nube.
 
-## Piloto visual Torija v1.5.0
+## Diseño Torija v1.5.0
 
 - Aplicar Torija v1.0.0 a acceso, Hoy, Semana, Control, Compra, Progreso, Excepciones y Ajustes.
 - Mantener cálculos, menús, ciclo, almacenamiento, fotos, cuenta y sincronización.
@@ -53,4 +53,4 @@ Seguir una dieta personal de seis meses basada en un menú que se repite en cicl
 - Preparar demostración local separada de producción, sin SDK, conexiones, credenciales o datos reales.
 - Demo temporal en memoria, sin APIs de persistencia, e informar que se pierde al recargar; acceso no operativo.
 - Candidata a producción con lógica intacta y solo metadatos de versión actualizados; mismo origen de GitHub Pages.
-- No publicar, integrar main ni actualizar catálogo hasta aprobación.
+- Publicación v1.5.0 aprobada expresamente; integrar main y actualizar catálogo manteniendo el origen existente.

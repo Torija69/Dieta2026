@@ -8,9 +8,9 @@ y cuenta opcional en Supabase para sincronizar entre dispositivos. Todo lo que r
 (estados de las comidas, comentarios, fotografías, listas de la compra y excepciones) se
 guarda en el propio dispositivo y, si inicias sesión, puede sincronizarse con tu cuenta.
 
-## Piloto Torija v1.5.0
+## Torija v1.5.0
 
-Vista previa pendiente de aprobación; la web publicada continúa en v1.4.2. Diseño Torija v1.0.0 con fuentes locales, cabecera carbón, superficies cálidas y acento lima. Se conservan el modo oscuro existente y los colores funcionales de los estados.
+Versión aprobada para publicar en el origen existente de GitHub Pages. Diseño Torija v1.0.0 con fuentes locales, cabecera carbón, superficies cálidas y acento lima. Se conservan el modo oscuro existente y los colores funcionales de los estados.
 
 El motor solo cambia `VERSION` y `VERSION_FECHA`; `nube.js`, `supabase.sql`, las claves de datos y las preferencias de producción no cambian. No se han consultado ni modificado datos reales de Supabase.
 
@@ -20,7 +20,7 @@ python3 scripts/preparar_web.py
 python3 -m http.server 8000
 ```
 
-- `dist/public/`: candidata a producción, con acceso y sincronización originales. No publicar todavía.
+- `dist/public/`: paquete de producción, con acceso y sincronización originales. GitHub Pages sirve los mismos archivos desde la raíz de main.
 - `dist/preview/`: demostración aislada y temporal. No incluye SDK, configuración real de nube ni APIs de persistencia; CSP sin conexiones. Los datos y fotos de prueba viven solo en memoria y se pierden al recargar.
 - `dist/preview/acceso-demo.html`: diseño de acceso ilustrativo, con campos desactivados. No acepta credenciales.
 
@@ -239,7 +239,7 @@ simple vista se sabe si el dispositivo está ejecutando la última versión.
 
 | Versión | Creada           | Cambios                                                              |
 | ------- | ---------------- | -------------------------------------------------------------------- |
-| 1.5.0 (vista previa) | 22/10/2026 19:59 | Identidad Torija v1.0.0 en las siete vistas y acceso; núcleo y nube sin cambios funcionales. Demostración separada, sin datos reales ni Supabase. |
+| 1.5.0 | 22/10/2026 19:59 | Identidad Torija v1.0.0 en las siete vistas y acceso; núcleo y nube sin cambios funcionales. Mismo origen y persistencia de producción; demo temporal independiente. |
 | 1.4.2   | 20/09/2026 14:50 | La versión es un dato único: se escribe solo en `VERSION` y `VERSION_FECHA` y de ahí se muestra en la pantalla de acceso, en Hoy, en Ajustes, en «Tu cuenta», en la bienvenida y en los archivos exportados. Nuevo botón «Buscar una versión nueva» que recarga la aplicación saltando la caché del navegador. |
 | 1.4.1   | 20/09/2026 14:35 | Los datos se cargan solo con la sesión confirmada y se bloquean las escrituras antes de comprobar el servidor, para que un arranque en blanco no pueda sustituir la copia de la nube. La versión pasa a mostrar su fecha y hora de creación. |
 | 1.4.0   | —                | Cuenta y versión visibles en la pantalla Hoy.                         |
