@@ -1,5 +1,14 @@
 # Changelog — dieta2026
 
+## v1.5.1 — 2026-10-22 · Pendiente de publicar
+
+- Librería de Supabase 2.115.0 servida desde el propio sitio (`vendor/`), idéntica a la de npm y con verificación de integridad; ya no se carga desde jsDelivr.
+- Política de seguridad de contenido: solo se ejecuta código propio y solo se conecta con el proyecto de Supabase.
+- Al cerrar sesión se puede borrar lo guardado en el dispositivo (registros, copia de seguridad y fotos). Solo se ofrece si la nube está confirmada y no se borra si quedan cambios sin subir.
+- Cierre de sesión tras un tiempo sin uso (5, 15, 30 —por defecto— o 60 minutos, o nunca), también al volver a abrir la página. No borra datos y solo actúa con «Pedir correo y contraseña al abrir».
+- Corregido: «Cerrar sesión» desde la ventana de la cuenta cerraba la confirmación sin salir.
+- Datos, esquema de Supabase y `nube.js` sin cambios.
+
 ## v1.5.0 — 2026-10-22
 
 - Sistema Torija v1.0.0 en acceso, siete vistas, formularios y modales; fuentes locales.

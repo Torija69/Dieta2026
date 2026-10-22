@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://ymkojmxilsitilfpmfxc.supabase.co wss://ymkojmxilsitilfpmfxc.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
     <title>Mi Plan de Dieta — Seguimiento personal de dieta, comidas y compra semanal</title>
     <meta
       name="description"
@@ -242,9 +246,9 @@
 
     <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
-    <!-- Cliente de Supabase: control de acceso y sincronización.
-         Si no se puede descargar, la aplicación sigue funcionando solo en local. -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js"></script>
+    <!-- Cliente de Supabase 2.115.0: copia local verificada (ver vendor/LEEME.md).
+         Si no se puede cargar, la aplicación sigue funcionando solo en local. -->
+    <script src="vendor/supabase-js-2.115.0.js" integrity="sha384-CLZeq1dk8+Uzrs7TVvBUdlFoV5F0DMqgRoeHa8g5wJcuPe5SkVfEvdxB0ZuzlnBQ"></script>
     <script src="nube.js"></script>
     <script src="app.js"></script>
   </body>

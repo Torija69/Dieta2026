@@ -55,3 +55,11 @@ Seguir una dieta personal de seis meses basada en un menú que se repite en cicl
 - Candidata a producción con lógica de la dieta intacta, metadatos y corrección aislada de seguridad; mismo origen de GitHub Pages.
 - Con aprobación separada, se corrige la importación JSON preexistente: valida antes de mutar estado, copia o fotos y admite copias válidas anteriores.
 - Publicación v1.5.0 aprobada expresamente; integrar main y actualizar catálogo manteniendo el origen existente.
+
+## Seguridad v1.5.1
+
+- SDK de Supabase local, sin modificar, con `integrity`; ningún script remoto.
+- CSP en `index.html`: `script-src 'self'`, `connect-src` limitado al proyecto de Supabase, `object-src 'none'`.
+- Borrado opcional de los datos del dispositivo al cerrar sesión, nunca con cambios sin subir ni sin copia de la nube confirmada.
+- Cierre de sesión por inactividad configurable por dispositivo (por defecto 30 minutos), solo con el bloqueo al abrir activado.
+- Fuera de alcance: cifrado de los datos locales.

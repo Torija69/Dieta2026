@@ -8,6 +8,13 @@ y cuenta opcional en Supabase para sincronizar entre dispositivos. Todo lo que r
 (estados de las comidas, comentarios, fotografías, listas de la compra y excepciones) se
 guarda en el propio dispositivo y, si inicias sesión, puede sincronizarse con tu cuenta.
 
+## Seguridad v1.5.1 (pendiente de publicar)
+
+- La librería de Supabase se sirve desde `vendor/` con verificación de integridad (ver `vendor/LEEME.md`) y la página declara una política de seguridad que solo permite código propio y conexiones con el proyecto de Supabase.
+- **Cerrar sesión** ofrece borrar los datos de este dispositivo; solo si la copia de la nube está confirmada y no quedan cambios sin subir. Al volver a entrar se descargan de la nube.
+- **Cerrar la sesión tras un tiempo sin uso** (Ajustes → Cuenta): 30 minutos por defecto. Requiere «Pedir correo y contraseña al abrir». No borra datos.
+- Los datos del navegador siguen sin cifrar: no uses la aplicación en un perfil compartido sin cerrar sesión con borrado.
+
 ## Torija v1.5.0
 
 Versión aprobada para publicar en el origen existente de GitHub Pages. Diseño Torija v1.0.0 con fuentes locales, cabecera carbón, superficies cálidas y acento lima. Se conservan el modo oscuro existente y los colores funcionales de los estados.

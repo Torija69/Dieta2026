@@ -22,9 +22,9 @@
    1. Utilidades generales y de fechas
    --------------------------------------------------------- */
 /** Versión del programa: se muestra en la pantalla Hoy y en Ajustes. */
-const VERSION = '1.5.0';
+const VERSION = '1.5.1';
 /** Fecha y hora en que se creó esta versión (hora de Madrid). */
-const VERSION_FECHA = '22/10/2026 19:59';
+const VERSION_FECHA = '22/10/2026 22:30';
 /** Texto completo de la versión: número más fecha y hora de creación.
     ÉSTE es el único sitio del programa donde se escribe la versión: todas las
     pantallas, los avisos y los archivos exportados leen estas constantes. */
@@ -3532,9 +3532,21 @@ function manejarCambio(ev) {
       state.settings.mostrarFotosResumen = el.checked;
       guardar('Cambios guardados');
       return;
-    case 'cfg-bloqueo':
+    case 'cfg-inactividad':
+      Inactividad.fijar(Number(el.value));
+      toast(
+        Inactividad.minutos()
+          ? `Cambios guardados: la sesión se cerrará tras ${Inactividad.minutos()} minutos sin uso`
+          : 'Cambios guardados: la sesión no se cerrará por inactividad'
+      );
+      return;
+    case 'cfg-bloqueo': {
       Bloqueo.fijar(el.checked);
       Bloqueo.permitidoAhora = false;
+      const selector = $('#cfg-inactividad');
+      if (selector) selector.disabled = !el.checked;
+      Inactividad.registrar(true);
+    }
       toast(
         el.checked
           ? 'Cambios guardados: al abrir la aplicación se pedirá la contraseña'
@@ -3629,7 +3641,19 @@ function campoClave(id, autocompletar) {
 /** Arranca la capa de nube y sincroniza si ya hay sesión abierta. */
 function iniciarNube() {
   Nube.init()
-    .then((listo) => {
+    .then(async (listo) => {
+      if (listo && Nube.conectado() && Inactividad.caducadaAlAbrir()) {
+        try {
+          await Nube.salir();
+        } catch (e) {
+          console.warn('No se pudo cerrar la sesión caducada', e);
+        }
+        toast('La sesión se cerró por inactividad. Vuelve a entrar para ver tus datos.');
+      }
+      if (listo) {
+        Inactividad.iniciar();
+        if (Nube.conectado()) Inactividad.registrar(true);
+      }
       pintarCuenta();
       aplicarBloqueo(false);
       if (!listo) return;
@@ -3865,7 +3889,7 @@ function abrirCuenta() {
         texto: '🚪 Cerrar sesión',
         onClick: () => {
           cerrarSesionNube();
-          return true;
+          return false;
         },
       },
       { texto: 'Cerrar', clase: 'btn--ghost', cerrar: true },
@@ -3946,6 +3970,7 @@ function formularioAcceso(modo) {
                 : Nube.entrar(email, pass);
           tarea
             .then((res) => {
+              Inactividad.registrar(true);
               cerrarModal();
               if (modo === 'recuperar') {
                 toast('Te hemos enviado un correo para restablecer la contraseña');
@@ -4047,6 +4072,7 @@ function formularioCambioClave(correoInicial) {
           Nube.entrar(correo, actual)
             .then(() => Nube.cambiarContrasena(nueva))
             .then(() => {
+              Inactividad.registrar(true);
               cerrarModal();
               toast('Cambios guardados: contraseña actualizada');
               aplicarBloqueo(false);
@@ -4126,22 +4152,59 @@ function formularioNuevaContrasena() {
 
 function cerrarSesionNube() {
   Bloqueo.permitidoAhora = false;
+  /* Solo se ofrece borrar si este dispositivo ya ha confirmado la copia de la
+     nube: así nunca se pierde nada que no esté también en el servidor. */
+  const sincronizado = Nube.listaParaEscribir() && Nube.estado !== 'error';
   confirmar({
     titulo: 'Cerrar sesión',
-    mensaje:
-      'Los datos seguirán guardados en este dispositivo y en la nube. Para volver a sincronizar tendrás que entrar de nuevo.',
+    mensaje: 'Para volver a sincronizar tendrás que entrar de nuevo.',
     textoConfirmar: 'Cerrar sesión',
     peligro: false,
+    extra: `<div class="check-row">
+        <input type="checkbox" id="salir-borrar" ${sincronizado ? 'checked' : 'disabled'} />
+        <label for="salir-borrar">Borrar también los datos de este dispositivo</label>
+      </div>
+      <p class="hint">${
+        sincronizado
+          ? 'Tus registros, comentarios y fotos seguirán en la nube y volverán al entrar de nuevo. Recomendado si este navegador lo usa más gente.'
+          : 'Ahora no se pueden borrar: este dispositivo aún no ha confirmado la copia de la nube, así que los datos se quedan aquí.'
+      }</p>`,
     onConfirmar: () => {
+      const casilla = $('#salir-borrar');
+      const borrar = !!(casilla && casilla.checked && !casilla.disabled);
       Nube.salir()
-        .then(() => {
-          toast('Sesión cerrada');
+        .then(async () => {
+          let borrados = false;
+          if (borrar && Nube.pendiente) {
+            toast('No se han borrado los datos de este dispositivo: quedaban cambios sin subir a la nube', 'error');
+          } else if (borrar) {
+            await borrarDatosDispositivo();
+            borrados = true;
+            toast('Sesión cerrada y datos de este dispositivo borrados');
+          } else {
+            toast('Sesión cerrada');
+          }
           pintarCuenta();
           render();
+          if (borrados) quizasPrimerArranque();
         })
         .catch((e) => toast(e.message, 'error'));
     },
   });
+}
+
+/** Borra registros, copia de seguridad y fotos de este navegador (no toca la nube). */
+async function borrarDatosDispositivo() {
+  await Fotos.vaciar();
+  Store.remove(CLAVE_DATOS);
+  Store.remove(CLAVE_COPIA);
+  Store.remove(`${CLAVE_DATOS}.fotos`);
+  state = estadoInicial(D.iso(D.hoy()));
+  ui.semanaVista = D.iso(D.lunes(D.hoy()));
+  ui.semanaControl = D.iso(D.lunes(D.hoy()));
+  ui.semanaCompra = lunesProximaSemana();
+  ui.primerArranquePendiente = true;
+  aplicarTema();
 }
 
 async function sincronizarAhora() {
@@ -4246,6 +4309,15 @@ function tarjetaNube() {
     </div>
     <p class="hint">Con esta opción activada, al abrir la página se muestra una pantalla de acceso y no se ve
     ningún dato hasta que entras. Es una preferencia de este dispositivo y no se sincroniza.</p>
+    <div class="field" style="max-width:22rem">
+      <label for="cfg-inactividad">Cerrar la sesión tras un tiempo sin uso</label>
+      <select id="cfg-inactividad" data-accion="cfg-inactividad" ${Bloqueo.activo() ? '' : 'disabled'}>
+        ${OPCIONES_INACTIVIDAD.map(
+          (m) => `<option value="${m}" ${Inactividad.minutos() === m ? 'selected' : ''}>${m ? `${m} minutos` : 'Nunca'}</option>`
+        ).join('')}
+      </select>
+    </div>
+    <p class="hint">Requiere la opción anterior. Al volver tendrás que escribir la contraseña; los datos no se borran.</p>
     <div class="row">
       <button type="button" class="btn btn--primary" data-accion="nube-sincronizar"><span aria-hidden="true">🔄</span>Sincronizar ahora</button>
       <button type="button" class="btn" data-accion="nube-subir"><span aria-hidden="true">⬆️</span>Subir este dispositivo a la nube</button>
@@ -4287,6 +4359,90 @@ const Bloqueo = {
 
   /** Permiso concedido solo para esta visita (caso «sin conexión»). */
   permitidoAhora: false,
+};
+
+/* Cierre de sesión por inactividad. Preferencia de este dispositivo; solo actúa
+   si se pide la contraseña al abrir y hay sesión iniciada. La marca de última
+   actividad se comparte entre pestañas y sobrevive a cerrar el navegador. */
+const CLAVE_INACTIVIDAD = 'miPlanDieta.v1.inactividad';
+const CLAVE_ACTIVIDAD = 'miPlanDieta.v1.actividad';
+const OPCIONES_INACTIVIDAD = [5, 15, 30, 60, 0];
+const INACTIVIDAD_DEFECTO = 30;
+
+const Inactividad = {
+  ultima: Date.now(),
+  ultimaGuardada: 0,
+  cerrando: false,
+  iniciada: false,
+
+  minutos() {
+    const guardado = Store.get(CLAVE_INACTIVIDAD);
+    const v = Number(guardado);
+    return guardado !== null && OPCIONES_INACTIVIDAD.includes(v) ? v : INACTIVIDAD_DEFECTO;
+  },
+
+  fijar(minutos) {
+    Store.set(CLAVE_INACTIVIDAD, String(OPCIONES_INACTIVIDAD.includes(minutos) ? minutos : INACTIVIDAD_DEFECTO));
+    this.registrar(true);
+  },
+
+  vigilando() {
+    return Bloqueo.activo() && Nube.conectado() && this.minutos() > 0;
+  },
+
+  registrar(forzar) {
+    const ahora = Date.now();
+    this.ultima = ahora;
+    if (forzar || ahora - this.ultimaGuardada > 15000) {
+      this.ultimaGuardada = ahora;
+      Store.set(CLAVE_ACTIVIDAD, String(ahora));
+    }
+  },
+
+  /** Tiempo sin uso según esta pestaña y la marca común a todas. */
+  caducada() {
+    if (!this.vigilando()) return false;
+    const comun = Number(Store.get(CLAVE_ACTIVIDAD)) || 0;
+    return Date.now() - Math.max(this.ultima, comun) > this.minutos() * 60000;
+  },
+
+  /** Al abrir solo cuenta la marca guardada: la carga de la página no es uso. */
+  caducadaAlAbrir() {
+    if (!this.vigilando()) return false;
+    const comun = Number(Store.get(CLAVE_ACTIVIDAD)) || 0;
+    return comun > 0 && Date.now() - comun > this.minutos() * 60000;
+  },
+
+  iniciar() {
+    if (this.iniciada) return;
+    this.iniciada = true;
+    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((tipo) =>
+      document.addEventListener(tipo, () => this.registrar(false), { passive: true, capture: true })
+    );
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') this.comprobar();
+    });
+    window.addEventListener('focus', () => this.comprobar());
+    window.addEventListener('pageshow', () => this.comprobar());
+    window.setInterval(() => this.comprobar(), 30000);
+  },
+
+  comprobar() {
+    if (this.cerrando || !this.caducada()) return;
+    this.cerrando = true;
+    Bloqueo.permitidoAhora = false;
+    cerrarModal();
+    Nube.salir()
+      .then(() => {
+        toast('Sesión cerrada por inactividad. Vuelve a entrar para ver tus datos.');
+        pintarCuenta();
+        render();
+      })
+      .catch((e) => console.warn('No se pudo cerrar la sesión por inactividad', e))
+      .finally(() => {
+        this.cerrando = false;
+      });
+  },
 };
 
 /** Escribe la versión en la pantalla de acceso, leyendo la única constante. */
@@ -4376,6 +4532,7 @@ function entrarDesdePantalla(ev) {
   boton.disabled = true;
   Nube.entrar(email, pass)
     .then(() => {
+      Inactividad.registrar(true);
       aviso.textContent = '';
       $('#acceso-pass').value = '';
       aplicarBloqueo(false);

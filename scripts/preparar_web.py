@@ -33,7 +33,11 @@ def main():
             shutil.copy2(src, out)
 
     document = (ROOT / "index.html").read_text(encoding="utf-8")
-    sdk = '    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js"></script>\n'
+    sdk = '    <script src="vendor/supabase-js-2.115.0.js" integrity="sha384-CLZeq1dk8+Uzrs7TVvBUdlFoV5F0DMqgRoeHa8g5wJcuPe5SkVfEvdxB0ZuzlnBQ"></script>\n'
+    production_csp = re.search(r'    <meta\n      http-equiv="Content-Security-Policy"\n.*?/>\n', document, re.S)
+    if not production_csp:
+        raise ValueError("Falta la política de seguridad de producción")
+    document = document.replace(production_csp.group(0), "", 1)
     demo = once(document, sdk, "")
     csp = """    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
     <link rel="stylesheet" href="demo.css">
@@ -51,13 +55,17 @@ def main():
     demo_app = once(app, "const CLAVE_DATOS = 'miPlanDieta.v1';", "const CLAVE_DATOS = 'Torija.Dieta.demo.v1';")
     demo_app = once(demo_app, "const CLAVE_COPIA = 'miPlanDieta.v1.copia';", "const CLAVE_COPIA = 'Torija.Dieta.demo.v1.copia';")
     demo_app = once(demo_app, "const CLAVE_BLOQUEO = 'miPlanDieta.v1.bloqueo';", "const CLAVE_BLOQUEO = 'Torija.Dieta.demo.v1.bloqueo';")
+    demo_app = once(demo_app, "const CLAVE_INACTIVIDAD = 'miPlanDieta.v1.inactividad';", "const CLAVE_INACTIVIDAD = 'Torija.Dieta.demo.v1.inactividad';")
+    demo_app = once(demo_app, "const CLAVE_ACTIVIDAD = 'miPlanDieta.v1.actividad';", "const CLAVE_ACTIVIDAD = 'Torija.Dieta.demo.v1.actividad';")
     storage_start = demo_app.index("/** Envoltorio de localStorage")
     storage_end = demo_app.index("/* ---------------------------------------------------------\n   4. Estado")
     memory = (ROOT / "preview/almacen-memoria.js").read_text(encoding="utf-8")
     demo_app = demo_app[:storage_start] + memory + "\n\n" + demo_app[storage_end:]
     lock_start = demo_app.index("const Bloqueo = {")
     lock_end = demo_app.index("/** Escribe la versión en la pantalla de acceso", lock_start)
-    demo_app = demo_app[:lock_start] + "const Bloqueo = { activo: () => false, fijar() {}, permitidoAhora: false };\n\n" + demo_app[lock_end:]
+    demo_app = demo_app[:lock_start] + ("const Bloqueo = { activo: () => false, fijar() {}, permitidoAhora: false };\n"
+        "const OPCIONES_INACTIVIDAD = [0];\n"
+        "const Inactividad = { minutos: () => 0, fijar() {}, registrar() {}, caducadaAlAbrir: () => false, iniciar() {} };\n\n") + demo_app[lock_end:]
     demo_app = once(demo_app,
                     "toast('El almacenamiento local está bloqueado en este contexto: los datos no se conservarán al recargar', 'error');",
                     "toast('Demostración temporal: los cambios se pierden al recargar');")
@@ -80,8 +88,12 @@ def main():
     for name in ("demo-inicio.js", "demo-acceso.js", "demo.css"):
         shutil.copy2(ROOT / "preview" / name, PREVIEW / name)
 
+    vendor = ROOT / "vendor" / "supabase-js-2.115.0.js"
+    (PUBLIC / "vendor").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(vendor, PUBLIC / "vendor" / vendor.name)
+
     shared = {p.relative_to(ROOT) for p in sources}
-    for folder, allowed in ((PUBLIC, shared), (PREVIEW, shared | {Path(n) for n in ("acceso-demo.html", "demo-inicio.js", "demo-acceso.js", "demo.css")})):
+    for folder, allowed in ((PUBLIC, shared | {vendor.relative_to(ROOT)}), (PREVIEW, shared | {Path(n) for n in ("acceso-demo.html", "demo-inicio.js", "demo-acceso.js", "demo.css")})):
         unexpected = {p.relative_to(folder) for p in folder.rglob("*") if p.is_file()} - allowed
         if unexpected:
             raise ValueError(f"Archivos no publicables en {folder}: {unexpected}")

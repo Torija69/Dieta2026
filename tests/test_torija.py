@@ -24,7 +24,7 @@ class TorijaTests(unittest.TestCase):
         source = re.sub(r"^const VERSION = .*;$", "const VERSION = metadata;", source, count=1, flags=re.M)
         source = re.sub(r"^const VERSION_FECHA = .*;$", "const VERSION_FECHA = metadata;", source, count=1, flags=re.M)
         self.assertEqual(hashlib.sha256(source.encode()).hexdigest(),
-                         "694a838cf5c5df5f3016e76a411a342d0c08d9831e81128911e3b296f600366b")
+                         "deab7c48ffdc6277bd8ab6536503dd1b66f119bc24b89bb49a91c3d60b576471")  # v1.5.1: sesión e inactividad
 
     def test_validacion_importacion_y_fotos(self):
         subprocess.run(["node", str(ROOT / "tests/seguridad_importacion.cjs")], check=True)
@@ -37,6 +37,22 @@ class TorijaTests(unittest.TestCase):
         }.items():
             with self.subTest(file=name):
                 self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected)
+
+    def test_sdk_local_verificado_y_csp(self):
+        import base64
+        sdk = (ROOT / "vendor/supabase-js-2.115.0.js").read_bytes()
+        sri = "sha384-" + base64.b64encode(hashlib.sha384(sdk).digest()).decode()
+        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn(f'src="vendor/supabase-js-2.115.0.js" integrity="{sri}"', page)
+        self.assertEqual(sri, "sha384-CLZeq1dk8+Uzrs7TVvBUdlFoV5F0DMqgRoeHa8g5wJcuPe5SkVfEvdxB0ZuzlnBQ")
+        self.assertNotRegex(page, r'<script[^>]+src=["\']https?://')
+        csp = re.search(r'http-equiv="Content-Security-Policy"\s+content="([^"]+)"', page).group(1)
+        self.assertIn("script-src 'self';", csp)
+        self.assertIn("connect-src 'self' https://ymkojmxilsitilfpmfxc.supabase.co wss://ymkojmxilsitilfpmfxc.supabase.co;", csp)
+        self.assertIn("object-src 'none'", csp)
+        self.assertNotIn("unsafe-eval", csp)
+        self.assertEqual(sdk, (ROOT / "dist/public/vendor/supabase-js-2.115.0.js").read_bytes())
+        self.assertFalse((ROOT / "dist/preview/vendor").exists())
 
     def test_candidata_identica_al_codigo(self):
         for name in ("index.html", "app.js", "nube.js", "styles.css"):
