@@ -8,7 +8,7 @@ y cuenta opcional en Supabase para sincronizar entre dispositivos. Todo lo que r
 (estados de las comidas, comentarios, fotografías, listas de la compra y excepciones) se
 guarda en el propio dispositivo y, si inicias sesión, puede sincronizarse con tu cuenta.
 
-## Seguridad v1.5.1 (pendiente de publicar)
+## Seguridad v1.5.1
 
 - La librería de Supabase se sirve desde `vendor/` con verificación de integridad (ver `vendor/LEEME.md`) y la página declara una política de seguridad que solo permite código propio y conexiones con el proyecto de Supabase.
 - **Cerrar sesión** ofrece borrar los datos de este dispositivo; solo si la copia de la nube está confirmada y no quedan cambios sin subir. Al volver a entrar se descargan de la nube.

@@ -1,6 +1,6 @@
 # Changelog — dieta2026
 
-## v1.5.1 — 2026-10-22 · Pendiente de publicar
+## v1.5.1 — 2026-10-22
 
 - Librería de Supabase 2.115.0 servida desde el propio sitio (`vendor/`), idéntica a la de npm y con verificación de integridad; ya no se carga desde jsDelivr.
 - Política de seguridad de contenido: solo se ejecuta código propio y solo se conecta con el proyecto de Supabase.
