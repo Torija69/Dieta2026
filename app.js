@@ -22,9 +22,9 @@
    1. Utilidades generales y de fechas
    --------------------------------------------------------- */
 /** Versión del programa: se muestra en la pantalla Hoy y en Ajustes. */
-const VERSION = '1.5.1';
+const VERSION = '1.6.0';
 /** Fecha y hora en que se creó esta versión (hora de Madrid). */
-const VERSION_FECHA = '22/10/2026 22:30';
+const VERSION_FECHA = '25/10/2026 15:23';
 /** Texto completo de la versión: número más fecha y hora de creación.
     ÉSTE es el único sitio del programa donde se escribe la versión: todas las
     pantallas, los avisos y los archivos exportados leen estas constantes. */

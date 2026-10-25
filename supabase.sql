@@ -1,5 +1,12 @@
+-- Instalar en un proyecto nuevo. En uno existente, ejecutar antes la migración
+-- docs/migracion-esquema-dieta.sql para conservar filas, políticas y trigger.
+create schema if not exists dieta;
+grant usage on schema dieta to authenticated, service_role;
+alter role authenticator set pgrst.db_schemas = 'public, Audiobiblioteca, dieta';
+notify pgrst, 'reload config';
+
 -- Estado completo de la dieta de cada usuario (un unico registro por usuario).
-create table if not exists public.dietas (
+create table if not exists dieta.dietas (
   usuario_id uuid primary key references auth.users (id) on delete cascade,
   datos jsonb not null default '{}'::jsonb,
   revision bigint not null default 1,
@@ -7,16 +14,16 @@ create table if not exists public.dietas (
   creado_en timestamptz not null default now()
 );
 
-comment on table public.dietas is 'Estado de Mi Plan de Dieta: ajustes, registros de comidas, listas de compra y excepciones de cada usuario.';
-comment on column public.dietas.datos is 'Documento JSON con todo el estado de la aplicacion.';
-comment on column public.dietas.revision is 'Se incrementa en cada guardado para detectar cambios desde otro dispositivo.';
+comment on table dieta.dietas is 'Estado de Mi Plan de Dieta: ajustes, registros de comidas, listas de compra y excepciones de cada usuario.';
+comment on column dieta.dietas.datos is 'Documento JSON con todo el estado de la aplicacion.';
+comment on column dieta.dietas.revision is 'Se incrementa en cada guardado para detectar cambios desde otro dispositivo.';
 
 -- Actualiza la marca de tiempo y la revision en cada escritura.
-create or replace function public.tocar_dieta()
+create or replace function dieta.tocar_dieta()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 begin
   new.actualizado_en := now();
@@ -27,28 +34,29 @@ begin
 end;
 $$;
 
-drop trigger if exists trg_tocar_dieta on public.dietas;
+drop trigger if exists trg_tocar_dieta on dieta.dietas;
 create trigger trg_tocar_dieta
-  before update on public.dietas
-  for each row execute function public.tocar_dieta();
+  before update on dieta.dietas
+  for each row execute function dieta.tocar_dieta();
 
 -- Cada usuario solo puede ver y modificar su propia fila.
-alter table public.dietas enable row level security;
+alter table dieta.dietas enable row level security;
+grant select, insert, update, delete on dieta.dietas to authenticated;
 
-drop policy if exists "dietas_select_propias" on public.dietas;
-create policy "dietas_select_propias" on public.dietas
+drop policy if exists "dietas_select_propias" on dieta.dietas;
+create policy "dietas_select_propias" on dieta.dietas
   for select to authenticated using (auth.uid() = usuario_id);
 
-drop policy if exists "dietas_insert_propias" on public.dietas;
-create policy "dietas_insert_propias" on public.dietas
+drop policy if exists "dietas_insert_propias" on dieta.dietas;
+create policy "dietas_insert_propias" on dieta.dietas
   for insert to authenticated with check (auth.uid() = usuario_id);
 
-drop policy if exists "dietas_update_propias" on public.dietas;
-create policy "dietas_update_propias" on public.dietas
+drop policy if exists "dietas_update_propias" on dieta.dietas;
+create policy "dietas_update_propias" on dieta.dietas
   for update to authenticated using (auth.uid() = usuario_id) with check (auth.uid() = usuario_id);
 
-drop policy if exists "dietas_delete_propias" on public.dietas;
-create policy "dietas_delete_propias" on public.dietas
+drop policy if exists "dietas_delete_propias" on dieta.dietas;
+create policy "dietas_delete_propias" on dieta.dietas
   for delete to authenticated using (auth.uid() = usuario_id);
 
 -- Bucket privado para las fotografias de los platos.

@@ -14,6 +14,7 @@
 const NUBE_CONFIG = {
   url: 'https://ymkojmxilsitilfpmfxc.supabase.co',
   clavePublicable: 'sb_publishable_L7C8CWIcKhlDjUkLuT6yJg__RVvJ18w',
+  esquema: 'dieta',
   tabla: 'dietas',
   bucket: 'fotos-dieta',
   retardoSubida: 2000,
@@ -216,7 +217,7 @@ const Nube = {
   async descargar() {
     if (!this.conectado()) return null;
     const { data, error } = await this.cliente
-      .from(NUBE_CONFIG.tabla)
+      .schema(NUBE_CONFIG.esquema).from(NUBE_CONFIG.tabla)
       .select('datos, revision, actualizado_en')
       .eq('usuario_id', this.usuario.id)
       .maybeSingle();
@@ -251,7 +252,7 @@ const Nube = {
       revision: (this.revision || 0) + 1,
     };
     const { data, error } = await this.cliente
-      .from(NUBE_CONFIG.tabla)
+      .schema(NUBE_CONFIG.esquema).from(NUBE_CONFIG.tabla)
       .upsert(fila, { onConflict: 'usuario_id' })
       .select('revision, actualizado_en')
       .single();
@@ -298,7 +299,7 @@ const Nube = {
 
   async borrarFila() {
     if (!this.conectado()) return false;
-    const { error } = await this.cliente.from(NUBE_CONFIG.tabla).delete().eq('usuario_id', this.usuario.id);
+    const { error } = await this.cliente.schema(NUBE_CONFIG.esquema).from(NUBE_CONFIG.tabla).delete().eq('usuario_id', this.usuario.id);
     if (error) throw new Error(this.traducirError(error));
     this.revision = 0;
     return true;

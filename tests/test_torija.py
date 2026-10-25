@@ -29,10 +29,20 @@ class TorijaTests(unittest.TestCase):
     def test_validacion_importacion_y_fotos(self):
         subprocess.run(["node", str(ROOT / "tests/seguridad_importacion.cjs")], check=True)
 
-    def test_nube_esquema_y_estilos_base_intactos(self):
+    def test_nube_y_esquema_dedicado(self):
+        subprocess.run(["node", str(ROOT / "tests/nube_esquema.cjs")], check=True)
+        nube = (ROOT / "nube.js").read_text(encoding="utf-8")
+        self.assertIn("esquema: 'dieta'", nube)
+        self.assertEqual(nube.count(".schema(NUBE_CONFIG.esquema).from(NUBE_CONFIG.tabla)"), 3)
+        self.assertNotIn("this.cliente.from(NUBE_CONFIG.tabla)", nube)
+        sql = (ROOT / "supabase.sql").read_text(encoding="utf-8")
+        self.assertIn("create table if not exists dieta.dietas", sql)
+        self.assertNotIn("public.dietas", sql)
+        migration = (ROOT / "docs/migracion-esquema-dieta.sql").read_text(encoding="utf-8")
+        self.assertIn("alter table public.dietas set schema dieta", migration)
+        self.assertIn("alter function public.tocar_dieta() set schema dieta", migration)
+        self.assertIn("pgrst.db_schemas = 'public, Audiobiblioteca, dieta'", migration)
         for name, expected in {
-            "nube.js": "a6aa54bfd8d18a16d80ca7748b245754fa25c725ac4fe734f2a9aee1a0cfa34e",
-            "supabase.sql": "9debc07633269cfbb0914bc1156d94a28cb202dd99ad6dac48bf6432d3ad059d",
             "styles.css": "5856a7e069dc7c7962ca50df465aa20ebef84c3e327a745dc0e4fe3ef15ddf0d",
         }.items():
             with self.subTest(file=name):

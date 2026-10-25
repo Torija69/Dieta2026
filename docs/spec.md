@@ -34,7 +34,7 @@ Seguir una dieta personal de seis meses basada en un menú que se repite en cicl
 |---|---|
 | Ajustes, menú, registros, comentarios, listas y excepciones | `localStorage` (`miPlanDieta.v1`) |
 | Fotos | `IndexedDB` (`miPlanDietaFotos`) o, si no, `localStorage` |
-| Sincronización (opcional) | Supabase: tabla `dietas` con RLS (cada usuario solo ve lo suyo) y Storage de fotos |
+| Sincronización (opcional) | Supabase: tabla `dieta.dietas` con RLS (cada usuario solo ve lo suyo) y Storage de fotos |
 
 - Son datos personales de salud. En el cliente solo va la clave publicable de Supabase y el esquema está en `supabase.sql`.
 
@@ -43,6 +43,7 @@ Seguir una dieta personal de seis meses basada en un menú que se repite en cicl
 - La app funciona en Chrome, Edge, Firefox y Safari 16.4 o superior, con y sin conexión.
 - Con sesión iniciada, un cambio hecho en el móvil aparece en el ordenador tras sincronizar.
 - Sin sesión confirmada no se cargan ni escriben datos en la nube.
+- Las operaciones de lectura, escritura y borrado de estado usan el esquema `dieta` en la API; la tabla no existe en `public`. Storage permanece sin cambios.
 
 ## Diseño Torija v1.5.0
 

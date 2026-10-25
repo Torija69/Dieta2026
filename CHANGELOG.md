@@ -1,5 +1,11 @@
 # Changelog — dieta2026
 
+## v1.6.0 — 2026-10-25
+
+- La tabla y el trigger de sincronización pasan al esquema `dieta` sin recrear filas; el cliente usa ese esquema explícitamente para lectura, escritura y eliminación.
+- La función de trigger también se mueve a `dieta`, con `search_path` vacío. Se mantienen las políticas RLS y el bucket de fotos.
+- El esquema dedicado se expone por PostgREST sin retirar los demás esquemas del proyecto. Hay una migración separada para instalaciones existentes y pruebas de regresión sin datos personales.
+
 ## v1.5.1 — 2026-10-22
 
 - Librería de Supabase 2.115.0 servida desde el propio sitio (`vendor/`), idéntica a la de npm y con verificación de integridad; ya no se carga desde jsDelivr.

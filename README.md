@@ -8,6 +8,13 @@ y cuenta opcional en Supabase para sincronizar entre dispositivos. Todo lo que r
 (estados de las comidas, comentarios, fotografías, listas de la compra y excepciones) se
 guarda en el propio dispositivo y, si inicias sesión, puede sincronizarse con tu cuenta.
 
+## Sincronización v1.6.0
+
+- La tabla de sincronización reside en `dieta.dietas`, no en `public`. El cliente selecciona el esquema `dieta` explícitamente.
+- En instalaciones existentes se utiliza `docs/migracion-esquema-dieta.sql` para trasladar la tabla y función, conservando filas, políticas RLS y trigger. El esquema debe estar expuesto en la API de Supabase; no aplicar `supabase.sql` como migración sobre datos existentes.
+- Las fotografías siguen en el bucket privado `fotos-dieta` de Supabase Storage.
+- Si se quedó abierta una pestaña anterior a v1.6.0, recargarla para reanudar la sincronización. La aplicación no permite subir cambios sin una lectura remota correcta.
+
 ## Seguridad v1.5.1
 
 - La librería de Supabase se sirve desde `vendor/` con verificación de integridad (ver `vendor/LEEME.md`) y la página declara una política de seguridad que solo permite código propio y conexiones con el proyecto de Supabase.
@@ -19,7 +26,7 @@ guarda en el propio dispositivo y, si inicias sesión, puede sincronizarse con t
 
 Versión aprobada para publicar en el origen existente de GitHub Pages. Diseño Torija v1.0.0 con fuentes locales, cabecera carbón, superficies cálidas y acento lima. Se conservan el modo oscuro existente y los colores funcionales de los estados.
 
-El motor conserva la lógica del programa salvo los metadatos `VERSION` y `VERSION_FECHA` y la corrección de seguridad de la importación; `nube.js`, `supabase.sql`, las claves de datos y las preferencias de producción no cambian. No se han consultado ni modificado datos reales de Supabase.
+En v1.5.0, el motor conservó la lógica del programa salvo los metadatos `VERSION` y `VERSION_FECHA` y la corrección de seguridad de la importación; entonces `nube.js`, `supabase.sql`, las claves de datos y las preferencias de producción no cambiaron. La migración posterior v1.6.0 sí actualiza el esquema de la tabla sin leer el contenido de los datos personales.
 La importación de copias JSON ahora valida fechas, identificadores, estructura y fotos antes de tocar los datos; rechaza archivos manipulados sin cambiar la copia guardada. Las copias propias válidas de v1.4.2 siguen siendo compatibles.
 
 ```sh

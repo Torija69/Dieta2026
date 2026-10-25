@@ -2,6 +2,7 @@
 
 | Fecha | Decisión | Motivo | Alternativas descartadas |
 |---|---|---|---|
+| 2026-10-25 | Mover `public.dietas` y su función a `dieta`, exponer el nuevo esquema por PostgREST y seleccionarlo explícitamente en el cliente | Separar los datos de dieta de `public` sin copiar ni reescribir filas; conservar identidad, RLS, permisos y trigger. Mantener los otros esquemas expuestos | Duplicar tablas, renombrar columnas, cambiar el origen de GitHub Pages |
 | 2026-10-22 | Servir supabase-js desde el repositorio con SRI y añadir CSP en meta | Quitar la confianza en jsDelivr en cada carga y limitar qué código y conexiones admite la página; GitHub Pages no permite cabeceras propias | Mantener el CDN, SRI sobre el CDN |
 | 2026-10-22 | Borrado opcional al cerrar sesión y cierre por inactividad, sin cifrado local | Opción ligera elegida por el usuario: protege perfiles compartidos sin cambiar el formato de los datos ni arriesgar pérdidas | Cifrado con contraseña propia (cambio grande, riesgo de pérdida si se olvida) |
 | 2026-10-22 | Rechazar copias JSON maliciosas y escapar atributos/imágenes al renderizar antes de publicar | La revisión halló XSS heredado; el usuario eligió expresamente corregirlo primero. Mantener compatibles copias propias v1.4.2 y la nube | Publicar con el riesgo abierto, convertir la demo sin nube en producción |
